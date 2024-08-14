@@ -232,6 +232,7 @@ def get_heat_risk_levels_description():
     - **4:** Extreme - This level of rare and/or long-duration extreme heat with little to no overnight relief affects anyone without effective cooling and/or adequate hydration. Impacts likely in most health systems, heat-sensitive industries, and infrastructure.
     """
 
+
 def create_map(layer1_with_weighted_values, selected_hhi_indicator, heat_threshold, heat_health_index_threshold, selected_state, selected_county, states, counties, zipcode_boundary=None):
     """
     Create an interactive map with highlighted areas based on selected HHI indicator and thresholds.
@@ -279,6 +280,7 @@ def create_map(layer1_with_weighted_values, selected_hhi_indicator, heat_thresho
     if selected_county != "Select a County" and selected_state_geom is not None:
         selected_county_geom = counties.loc[(counties['STATE_NAME'] == selected_state) & (counties['NAME'] == selected_county), 'geometry'].values[0]
 
+    #FIXME: /app/utils.py:283: UserWarning: Geometry is in a geographic CRS. Results from 'centroid' are likely incorrect. Use 'GeoSeries.to_crs()' to re-project geometries to a projected CRS before this operation.
     # Set initial map location and zoom level
     initial_location = [highlighted_areas.geometry.centroid.y.mean(), highlighted_areas.geometry.centroid.x.mean()]
     initial_zoom = 4
