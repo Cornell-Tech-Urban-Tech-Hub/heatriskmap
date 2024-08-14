@@ -1,0 +1,10 @@
+numpy
+pandas
+geopandas
+rasterio
+pyproj
+boto3
+requests
+openpyxl
+pyarrow
+pytz
