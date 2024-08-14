@@ -86,7 +86,7 @@ def load_data(selected_day):
         st.error(f"An error occurred while loading the data: {e}")
         return None
 
-st.cache_data
+@st.cache_data
 def load_state_county_zip_data():
     """
     Load state, county, and ZIP Code boundary data from pre-downloaded Parquet files.
@@ -97,9 +97,9 @@ def load_state_county_zip_data():
     Returns:
         tuple: A tuple containing three GeoDataFrames: states, counties, and zipcodes.
     """
-    states_file = "streamlit-app/data/us_states_reduced.parquet"
-    counties_file = "streamlit-app/data/us_counties_reduced.parquet"
-    zipcodes_file = "streamlit-app/data/us_zipcodes_reduced.parquet"
+    states_file = "data/us_states_reduced.parquet"
+    counties_file = "data/us_counties_reduced.parquet"
+    zipcodes_file = "data/us_zipcodes_reduced.parquet"
 
     # Load the GeoDataFrames
     states = gpd.read_parquet(states_file)
@@ -192,8 +192,9 @@ def move_column_to_front(columns, column_name):
         columns.insert(0, column_name)
     return columns
 
+#TODO: lets download this rather than load from disk to make sure its current
 @st.cache_data
-def load_hhi_description(file_path='streamlit-app/data/HHI_Data_Dictionary_2024.csv'):
+def load_hhi_description(file_path='data/HHI_Data_Dictionary_2024.csv'):
     """
     Load the HHI data dictionary from a CSV file.
     

@@ -1,10 +1,10 @@
 
-# Ignore all files in the data directory, except specific files
-streamlit-app/data/*
-!streamlit-app/data/us_states_reduced.parquet
-!streamlit-app/data/us_counties_reduced.parquet
-!streamlit-app/data/HHI_Data_Dictionary_2024.csv
-!streamlit-app/data/us_zipcodes_reduced.parquet
+# # Ignore all files in the data directory, except specific files
+# streamlit-app/data/*
+# !streamlit-app/data/us_states_reduced.parquet
+# !streamlit-app/data/us_counties_reduced.parquet
+# !streamlit-app/data/HHI_Data_Dictionary_2024.csv
+# !streamlit-app/data/us_zipcodes_reduced.parquet
 
 streamlit-app/app_with_todos.py
 streamlit-app/temp.ipynb
@@ -40,8 +40,6 @@ terraform.rc
 # Ignore .terraform directories
 **/.terraform/*
 
-# data
-data/
 
 .DS_Store
 
