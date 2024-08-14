@@ -44,6 +44,11 @@ Goal is to create Lambda function packaged for deployment as an AWS CDK stack, a
 
 2. do the Terreform
 
+
+Initial prototyping and debugging of data pipelines and map.
+
+# This branch was contributed by Yixuan Wang and Leihao Fang
+=======
         terraform apply
 
 3. Build and push the docker image
@@ -61,3 +66,4 @@ Goal is to create Lambda function packaged for deployment as an AWS CDK stack, a
                 --job-definition <your-job-definition-arn>
 
         aws batch describe-jobs --jobs <your-job-id>
+

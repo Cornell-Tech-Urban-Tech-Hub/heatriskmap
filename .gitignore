@@ -1,3 +1,16 @@
+
+# Ignore all files in the data directory, except specific files
+streamlit-app/data/*
+!streamlit-app/data/us_states_reduced.parquet
+!streamlit-app/data/us_counties_reduced.parquet
+!streamlit-app/data/HHI_Data_Dictionary_2024.csv
+!streamlit-app/data/us_zipcodes_reduced.parquet
+
+streamlit-app/app_with_todos.py
+streamlit-app/temp.ipynb
+
+# Ignore macOS system files
+=======
 # Terraform state files
 *.tfstate
 *.tfstate.*
@@ -29,9 +42,18 @@ terraform.rc
 
 # data
 data/
+
 .DS_Store
+
+# Ignore secrets file
 secrets.toml
 cdk.out
+
+# Ignore specific directories
+yw/
+scraper/
+dev-notebook/
+data_prep_yw/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

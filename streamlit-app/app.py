@@ -17,9 +17,11 @@ st.sidebar.header("Controls")
 # Toggle for map size
 map_size_option = st.sidebar.radio("Map Size", ("Regular", "Full Page"))
 
+
 # Encourage the user to collapse the sidebar for full-page view
 if map_size_option == "Full Page":
     st.sidebar.info("For a better view, you can hide the sidebar by clicking the arrow at the top-left corner.")
+
 
 # Day selection
 tz = pytz.timezone('America/New_York')
@@ -53,12 +55,33 @@ else:
     # Load geographic data using the utility function
     states, counties, selected_state, selected_county, zipcode_boundary = utils.load_geographic_data()
 
+    # Construct the URL for the selected day
+    url = f"https://heat-risk-dashboard.s3.amazonaws.com/heat_risk_analysis_{selected_day.replace(' ', '+')}_20240723.geoparquet"
+    
+    local_file = os.path.join(data_dir, f"heat_risk_analysis_{selected_day}.geoparquet")
+
+    if not os.path.exists(local_file):
+        print(f"Downloading {url}...")
+        response = requests.get(url)
+        response.raise_for_status()
+        with open(local_file, 'wb') as file:
+            file.write(response.content)
+        print(f"Saved to {local_file}")
+    else:
+        print(f"{local_file} already exists.")
+
+    # Load the geoparquet file
+    layer1_with_weighted_values = gpd.read_parquet(local_file)
+    
+    return layer1_with_weighted_values
+
 # Generate the column mappings dynamically based on consistent formatting
 hhi_column_mapping = utils.generate_column_mapping(layer1_with_weighted_values.columns)
 
 # Get the list of available columns for HHI indicators
 hhi_columns = list(hhi_column_mapping.keys())
 hhi_columns = utils.move_column_to_front(hhi_columns, "weighted_OVERALL_SCORE")
+
 
 # Create a list of display names
 display_names = [hhi_column_mapping[col] for col in hhi_columns]
@@ -185,3 +208,29 @@ if selected_state != "Select a State" or selected_county != "Select a County":
         st.warning('No data available for the selected state or county.')
 else:
     st.subheader('Select a State or County to get key summaries')
+
+
+# Add the disclaimer to the footer
+st.markdown("""
+    <style>
+    .footer {
+        position: fixed;
+        right: 0;
+        bottom: 0;
+        width: 30%;
+        background-color: #f1f1f1;
+        color: black;
+        text-align: center;
+        padding: 10px;
+    }
+    </style>
+    <div class="footer">
+        This is an experimental prototype provided for informational purposes only by the 
+        <a href="https://urbantech.cornell.edu/" target="_blank">Jacobs Urban Tech Hub</a> 
+        as part of the 
+        <a href="https://agingandadaptation.cornell.edu/" target="_blank">Cornell Initiative on Aging and Adaptation to Extreme Heat</a>.
+        Questions? Comments? Contact us at 
+        <a href="mailto:urbantech@cornell.edu">urbantech@cornell.edu</a>.
+    </div>
+""", unsafe_allow_html=True)
+
