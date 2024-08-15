@@ -13,6 +13,12 @@ It consists of two parts:
 
 A Streamlit app packaged for deployment on Streamlit Community Cloud. Allows users to make selections of day and indicator, and threshholds for filters for both.
 
+### Development
+
+Run locally:
+
+        cd dash/streamlit-docker && docker-compose up --build streamlit
+
 ### Deployment
 
 Deployed using AWS Fargate with [this approach](https://github.com/tzaffi/streamlit-cdk-fargate)
