@@ -21,34 +21,20 @@ class DashStack(Stack):
 
         image = ecs.ContainerImage.from_asset('streamlit-docker')
 
-        task_definition = ecs.FargateTaskDefinition(
-            self, "TaskDef",
-            cpu=1024,
-            memory_limit_mib=2048,
-        )
-
-        container = task_definition.add_container(
-            "StreamlitContainer",
-            image=image,
-            logging=ecs.LogDrivers.aws_logs(stream_prefix="HeatDashStreamlit"),
-            health_check=ecs.HealthCheck(
-                command=["CMD-SHELL", "curl -f http://localhost:8501/ || exit 1"],
-                interval=Duration.seconds(30),
-                timeout=Duration.seconds(5),
-                retries=3,
-                start_period=Duration.seconds(60),
-            )
-        )
-
-        container.add_port_mappings(ecs.PortMapping(container_port=8501))
-
         service = ecs_patterns.ApplicationLoadBalancedFargateService(
             self, "HeatDashFargateService",
             cluster=cluster,
-            cpu=1024,
+            task_image_options=ecs_patterns.ApplicationLoadBalancedTaskImageOptions(
+                image=image,
+                container_port=8501,
+                environment={
+                    # Add any environment variables your app needs
+                },
+                log_driver=ecs.LogDrivers.aws_logs(stream_prefix="HeatDashStreamlit"),
+            ),
             desired_count=2,
-            task_definition=task_definition,
-            memory_limit_mib=2048,
+            cpu=4096,  # This corresponds to 4 vCPU
+            memory_limit_mib=30720,  # This corresponds to 30 GB
             public_load_balancer=True,
         )
 
