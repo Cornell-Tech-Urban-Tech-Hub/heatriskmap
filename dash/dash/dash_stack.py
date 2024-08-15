@@ -2,7 +2,9 @@ from aws_cdk import (
     aws_ec2 as ec2,
     aws_ecs as ecs,
     aws_ecs_patterns as ecs_patterns,
-    Stack
+    aws_elasticloadbalancingv2 as elbv2,
+    Stack,
+    Duration
 )
 from constructs import Construct
 
@@ -12,24 +14,60 @@ class DashStack(Stack):
 
         vpc = ec2.Vpc(
             self, "HeatDashStreamlitVPC",
-            max_azs=2,  # default is all AZs in region
+            max_azs=2,
         )
 
         cluster = ecs.Cluster(self, "HeatDashStreamlitCluster", vpc=vpc)
 
-        # Build Dockerfile from local folder and push to ECR
         image = ecs.ContainerImage.from_asset('streamlit-docker')
 
-        # Use an ecs_patterns recipe to do all the rest!
-        ecs_patterns.ApplicationLoadBalancedFargateService(
+        task_definition = ecs.FargateTaskDefinition(
+            self, "TaskDef",
+            cpu=1024,
+            memory_limit_mib=2048,
+        )
+
+        container = task_definition.add_container(
+            "StreamlitContainer",
+            image=image,
+            logging=ecs.LogDrivers.aws_logs(stream_prefix="HeatDashStreamlit"),
+            health_check=ecs.HealthCheck(
+                command=["CMD-SHELL", "curl -f http://localhost:8501/ || exit 1"],
+                interval=Duration.seconds(30),
+                timeout=Duration.seconds(5),
+                retries=3,
+                start_period=Duration.seconds(60),
+            )
+        )
+
+        container.add_port_mappings(ecs.PortMapping(container_port=8501))
+
+        service = ecs_patterns.ApplicationLoadBalancedFargateService(
             self, "HeatDashFargateService",
-            cluster=cluster,  # Required
-            cpu=256,  # Default is 256
-            desired_count=1,  # Default is 1
-            task_image_options=ecs_patterns.ApplicationLoadBalancedTaskImageOptions(
-                image=image,
-                container_port=8501  # Docker exposes 8501 for streamlit
-            ),
-            memory_limit_mib=512,  # Default is 512
-            public_load_balancer=True,  # Default is False
+            cluster=cluster,
+            cpu=1024,
+            desired_count=2,
+            task_definition=task_definition,
+            memory_limit_mib=2048,
+            public_load_balancer=True,
+        )
+
+        # Configure the health check for the target group
+        service.target_group.configure_health_check(
+            path="/",
+            healthy_http_codes="200",
+            interval=Duration.seconds(60),
+            timeout=Duration.seconds(30),
+            healthy_threshold_count=3,
+            unhealthy_threshold_count=3,
+        )
+
+        scaling = service.service.auto_scale_task_count(
+            max_capacity=4
+        )
+        scaling.scale_on_cpu_utilization(
+            "CpuScaling",
+            target_utilization_percent=70,
+            scale_in_cooldown=Duration.seconds(60),
+            scale_out_cooldown=Duration.seconds(60),
         )
