@@ -1,19 +1,35 @@
 from aws_cdk import (
-    # Duration,
-    Stack,
-    # aws_sqs as sqs,
+    aws_ec2 as ec2,
+    aws_ecs as ecs,
+    aws_ecs_patterns as ecs_patterns,
+    Stack
 )
 from constructs import Construct
 
 class DashStack(Stack):
+    def __init__(self, scope: Construct, id: str, **kwargs) -> None:
+        super().__init__(scope, id, **kwargs)
 
-    def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
-        super().__init__(scope, construct_id, **kwargs)
+        vpc = ec2.Vpc(
+            self, "HeatDashStreamlitVPC",
+            max_azs=2,  # default is all AZs in region
+        )
 
-        # The code that defines your stack goes here
+        cluster = ecs.Cluster(self, "HeatDashStreamlitCluster", vpc=vpc)
 
-        # example resource
-        # queue = sqs.Queue(
-        #     self, "DashQueue",
-        #     visibility_timeout=Duration.seconds(300),
-        # )
+        # Build Dockerfile from local folder and push to ECR
+        image = ecs.ContainerImage.from_asset('streamlit-docker')
+
+        # Use an ecs_patterns recipe to do all the rest!
+        ecs_patterns.ApplicationLoadBalancedFargateService(
+            self, "HeatDashFargateService",
+            cluster=cluster,  # Required
+            cpu=256,  # Default is 256
+            desired_count=1,  # Default is 1
+            task_image_options=ecs_patterns.ApplicationLoadBalancedTaskImageOptions(
+                image=image,
+                container_port=8501  # Docker exposes 8501 for streamlit
+            ),
+            memory_limit_mib=512,  # Default is 512
+            public_load_balancer=True,  # Default is False
+        )

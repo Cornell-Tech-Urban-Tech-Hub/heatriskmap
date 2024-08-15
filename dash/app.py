@@ -5,7 +5,6 @@ import aws_cdk as cdk
 
 from dash.dash_stack import DashStack
 
-
 app = cdk.App()
 DashStack(app, "DashStack",
     # If you don't specify 'env', this stack will be environment-agnostic.
