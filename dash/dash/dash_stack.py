@@ -33,8 +33,8 @@ class DashStack(Stack):
                 log_driver=ecs.LogDrivers.aws_logs(stream_prefix="HeatDashStreamlit"),
             ),
             desired_count=2,
-            cpu=4096,  # This corresponds to 4 vCPU
-            memory_limit_mib=30720,  # This corresponds to 30 GB
+            cpu=16384,  # This corresponds to 16 vCPU (maximum)
+            memory_limit_mib=122880,  # This corresponds to 120 GB (maximum)
             public_load_balancer=True,
         )
 
