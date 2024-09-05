@@ -23,6 +23,12 @@ Run locally:
 
 Deployed using AWS Fargate with [this approach](https://github.com/tzaffi/streamlit-cdk-fargate)
 
+To update the stack:
+
+        cd dash
+        cdk synth # check the stack
+        cdk deploy # push changes
+
 ## `scraper`
 
 A containerized Batch script deployed to AWS with Terraform runs once nightly to fetch and preprocess and join the NWS and CDC data layers. One geoparquet is produced for each of the 7 days of the NWS Heat Risk forecast with area-weighted indicators joined from the CDC Heat and Health Index data (which is the same for all days). These data are stored in a public S3 bucket.
