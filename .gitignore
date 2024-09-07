@@ -1,4 +1,6 @@
 
+/tmp
+
 # # Ignore all files in the data directory, except specific files
 # streamlit-app/data/*
 # !streamlit-app/data/us_states_reduced.parquet
