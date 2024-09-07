@@ -13,8 +13,11 @@
         "module": "streamlit",
         "justMyCode": true,
         "args": ["run", "${file}"],
-        "cwd": "${workspaceFolder}/dash",
-        "args": ["run", "app.py"]
+        "cwd": "${workspaceFolder}/dash/streamlit-docker/",
+        "args": ["run", "app.py"],
+        "env": {
+          "CDK_DEFAULT_ACCOUNT": "your_account_value"
+        }
       },
   
       
