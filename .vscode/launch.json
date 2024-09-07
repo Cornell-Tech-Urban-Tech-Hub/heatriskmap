@@ -13,8 +13,8 @@
         "module": "streamlit",
         "justMyCode": true,
         "args": ["run", "${file}"],
-        // "cwd": "${workspaceFolder}/src",
-        // "args": ["run", "app.py"]
+        "cwd": "${workspaceFolder}/dash",
+        "args": ["run", "app.py"]
       },
   
       

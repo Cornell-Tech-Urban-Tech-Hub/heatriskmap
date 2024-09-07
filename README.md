@@ -17,7 +17,7 @@ A Streamlit app packaged for deployment on Streamlit Community Cloud. Allows use
 
 Run locally:
 
-        cd dash/streamlit-docker && docker-compose up --build streamlit
+        cd dash/streamlit-docker && docker compose up --build streamlit
 
 ### Deployment
 
