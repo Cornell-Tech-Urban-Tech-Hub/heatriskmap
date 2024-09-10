@@ -1,5 +1,13 @@
 # NWS Heat Risk x CDC Heat and Health Index Dashboard
 
+## TODO list
+
+1. simplicity = merge the two deployments into a single stack.
+2. debugging = add unified logging to the entire stack
+3. optimization = move the S3 data to Cloudfront CDN
+
+## description
+
 This application is an experimental dashboard that two new indices published by federal agencies to help understand the health impacts of extreme heat — the NWS Heat Risk and the CDC Heat and Health Index.
 
 It consists of two parts:
@@ -7,7 +15,6 @@ It consists of two parts:
 - A Python **scraper** script that is deployed to AWS with Terraform, and runs an AWS Batch job nightly to fetch and preprocess data from the NWS and CDC.
 - A Python web **dash** streamlit app that is deployed with to AWS Fargate with AWS CDK.
 
-#### TODO: merge the two deployments into a single stack.
 
 ## `dash`
 

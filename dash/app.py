@@ -13,7 +13,7 @@ env=cdk.Environment(
 
 DashStack(
     app, 
-    "HeatDashStreamlit",
+    "HeatDashStreamlit-NoCaching",
     env=env
     )
 

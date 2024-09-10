@@ -38,21 +38,14 @@ heat_threshold = st.sidebar.multiselect("Select Heat Risk Levels", [0, 1, 2, 3, 
 with st.sidebar.expander('Learn more about heat risk levels'):
     st.markdown(utils.get_heat_risk_levels_description())
 
-
 # Load the heat risk data
-@st.cache_data(ttl=86400) # Cache for 24 hours (86400 seconds)
-def cached_load_data(selected_day):
-    try:
-        data = utils.load_data(selected_day)
-        if data is None or data.empty:
-            st.error("Data could not be loaded. Please check the data source or network connection.")
-            return None
-        return data
-    except Exception as e:
-        st.error(f"An error occurred while loading the data: {e}")
-        return None
-
-layer1_with_weighted_values = cached_load_data(selected_day)
+try:
+    layer1_with_weighted_values = utils.load_data(selected_day)
+    if layer1_with_weighted_values is None or layer1_with_weighted_values.empty:
+        st.error("Data could not be loaded. Please check the data source or network connection.")
+except Exception as e:
+    st.error(f"An error occurred while loading the data: {e}")
+    layer1_with_weighted_values = None
 
 # Check if data is loaded successfully
 if layer1_with_weighted_values is None:
@@ -110,7 +103,6 @@ st.sidebar.markdown("""
 - [NWS Heat Risk](https://www.wpc.ncep.noaa.gov/heatrisk/)
 - [CDC Heat and Health Index](https://ephtracking.cdc.gov/Applications/heatTracker/)
 """)
-
 
 # Main dashboard
 m = utils.create_map(layer1_with_weighted_values, selected_hhi_indicator, heat_threshold, heat_health_index_threshold, selected_state, selected_county, states, counties, zipcode_boundary)
