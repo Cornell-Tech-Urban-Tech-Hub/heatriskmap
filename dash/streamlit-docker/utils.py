@@ -86,7 +86,7 @@ def load_data(selected_day):
         st.error(f"An error occurred while loading the data: {e}")
         return None
 
-st.cache_data
+@st.cache_data
 def load_state_county_zip_data():
     """
     Load state, county, and ZIP Code boundary data from pre-downloaded Parquet files.
@@ -97,9 +97,9 @@ def load_state_county_zip_data():
     Returns:
         tuple: A tuple containing three GeoDataFrames: states, counties, and zipcodes.
     """
-    states_file = "streamlit-app/data/us_states_reduced.parquet"
-    counties_file = "streamlit-app/data/us_counties_reduced.parquet"
-    zipcodes_file = "streamlit-app/data/us_zipcodes_reduced.parquet"
+    states_file = "data/us_states_reduced.parquet"
+    counties_file = "data/us_counties_reduced.parquet"
+    zipcodes_file = "data/us_zipcodes_reduced.parquet"
 
     # Load the GeoDataFrames
     states = gpd.read_parquet(states_file)
@@ -192,8 +192,9 @@ def move_column_to_front(columns, column_name):
         columns.insert(0, column_name)
     return columns
 
+#TODO: lets download this rather than load from disk to make sure its current
 @st.cache_data
-def load_hhi_description(file_path='streamlit-app/data/HHI_Data_Dictionary_2024.csv'):
+def load_hhi_description(file_path='data/HHI_Data_Dictionary_2024.csv'):
     """
     Load the HHI data dictionary from a CSV file.
     
@@ -230,6 +231,7 @@ def get_heat_risk_levels_description():
     - **3:** Major - This level of heat affects anyone without effective cooling and/or adequate hydration. Impacts likely in some health systems, heat-sensitive industries, and infrastructure.
     - **4:** Extreme - This level of rare and/or long-duration extreme heat with little to no overnight relief affects anyone without effective cooling and/or adequate hydration. Impacts likely in most health systems, heat-sensitive industries, and infrastructure.
     """
+
 
 def create_map(layer1_with_weighted_values, selected_hhi_indicator, heat_threshold, heat_health_index_threshold, selected_state, selected_county, states, counties, zipcode_boundary=None):
     """
@@ -278,6 +280,7 @@ def create_map(layer1_with_weighted_values, selected_hhi_indicator, heat_thresho
     if selected_county != "Select a County" and selected_state_geom is not None:
         selected_county_geom = counties.loc[(counties['STATE_NAME'] == selected_state) & (counties['NAME'] == selected_county), 'geometry'].values[0]
 
+    #FIXME: /app/utils.py:283: UserWarning: Geometry is in a geographic CRS. Results from 'centroid' are likely incorrect. Use 'GeoSeries.to_crs()' to re-project geometries to a projected CRS before this operation.
     # Set initial map location and zoom level
     initial_location = [highlighted_areas.geometry.centroid.y.mean(), highlighted_areas.geometry.centroid.x.mean()]
     initial_zoom = 4
