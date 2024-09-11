@@ -5,9 +5,13 @@ from aws_cdk import (
     aws_route53 as route53,
     aws_route53_targets as targets,
     aws_certificatemanager as acm,
+    aws_s3 as s3,
+    aws_cloudfront as cloudfront,
+    aws_cloudfront_origins as origins,
     Stack,
     Duration,
-    CfnOutput
+    CfnOutput,
+    RemovalPolicy
 )
 from constructs import Construct
 
@@ -17,7 +21,7 @@ class DashStack(Stack):
 
         # Define the domain name
         domain_name = "urbantech.info"
-        subdomain = "heatmap"
+        subdomain = "heatmap-cloudfront"
         fqdn = f"{subdomain}.{domain_name}"
 
         # Create VPC and ECS Cluster
@@ -36,6 +40,23 @@ class DashStack(Stack):
             validation=acm.CertificateValidation.from_dns(hosted_zone)
         )
 
+        # Reference or create S3 bucket for heat risk data
+        bucket_name = "heat-risk-dashboard"
+        heat_risk_bucket = s3.Bucket.from_bucket_name(self, "HeatRiskBucket", bucket_name)
+
+
+        # Create CloudFront distribution
+        distribution = cloudfront.Distribution(self, "HeatRiskDistribution",
+            default_behavior=cloudfront.BehaviorOptions(
+                origin=origins.S3Origin(heat_risk_bucket),
+                viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+                allowed_methods=cloudfront.AllowedMethods.ALLOW_GET_HEAD,
+                cached_methods=cloudfront.CachedMethods.CACHE_GET_HEAD
+            ),
+            certificate=certificate,
+            domain_names=[fqdn]
+        )
+
         # Create the Fargate service with ALB
         service = ecs_patterns.ApplicationLoadBalancedFargateService(
             self, "HeatDashFargateService",
@@ -44,7 +65,7 @@ class DashStack(Stack):
                 image=image,
                 container_port=8501,
                 environment={
-                    # Add any environment variables your app needs
+                    "CLOUDFRONT_URL": f"https://{distribution.distribution_domain_name}"
                 },
                 log_driver=ecs.LogDrivers.aws_logs(stream_prefix="HeatDashStreamlit"),
             ),
@@ -78,3 +99,6 @@ class DashStack(Stack):
 
         # Output the DNS name of the load balancer
         CfnOutput(self, "LoadBalancerDNS", value=service.load_balancer.load_balancer_dns_name)
+
+        # Output the CloudFront distribution URL
+        CfnOutput(self, "CloudFrontURL", value=distribution.distribution_domain_name)

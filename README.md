@@ -1,6 +1,6 @@
 # NWS Heat Risk x CDC Heat and Health Index Dashboard
 
-## TODO list
+#To Do list
 
 1. simplicity = merge the two deployments into a single stack.
 2. debugging = add unified logging to the entire stack
