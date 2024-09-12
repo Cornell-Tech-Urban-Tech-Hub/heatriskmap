@@ -21,7 +21,7 @@ class DashStack(Stack):
 
         # Define the domain name
         domain_name = "urbantech.info"
-        subdomain = "heatmap-cloudfront"
+        subdomain = "heatmap-dev"
         fqdn = f"{subdomain}.{domain_name}"
 
         # Create VPC and ECS Cluster
