@@ -11,3 +11,4 @@ IPython
 streamlit
 streamlit_folium
 plotly
+pyarrow
