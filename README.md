@@ -18,7 +18,7 @@ It consists of two parts:
 
 ## `dash`
 
-A Streamlit app packaged for deployment on Streamlit Community Cloud. Allows users to make selections of day and indicator, and threshholds for filters for both.
+A Streamlit app packaged for deployment on AWS Elastic Container Service / Fargate. Allows users to make selections of day and indicator, and threshholds for filters for both.
 
 ### Development
 
