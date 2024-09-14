@@ -15,7 +15,6 @@ from shapely.geometry import Point
 import pyarrow.parquet as pq
 from shapely import wkb
 
-
 @st.cache_data(ttl=300)  # Increased TTL to 5 min
 def load_data(selected_day):
     tz = pytz.timezone('America/New_York')
@@ -141,6 +140,16 @@ def get_heat_risk_levels_description():
     - **4:** Extreme - This level of rare and/or long-duration extreme heat with little to no overnight relief affects anyone without effective cooling and/or adequate hydration. Impacts likely in most health systems, heat-sensitive industries, and infrastructure.
     """
 
+@lru_cache(maxsize=None)
+def project_single_geometry(geom, from_crs, to_crs):
+    return gpd.GeoSeries([geom], crs=from_crs).to_crs(to_crs)[0]
+
+def project_geometries(geometries, from_crs, to_crs):
+    if isinstance(geometries, (list, tuple)):
+        return [project_single_geometry(geom, from_crs, to_crs) for geom in geometries]
+    else:
+        return project_single_geometry(geometries, from_crs, to_crs)
+
 def create_map(layer1_with_weighted_values, selected_hhi_indicator, heat_threshold, heat_health_index_threshold, selected_state, selected_county, states, counties, zipcode_boundary=None):
     if layer1_with_weighted_values.empty:
         st.warning("The data is empty. Please check your inputs.")
@@ -154,47 +163,51 @@ def create_map(layer1_with_weighted_values, selected_hhi_indicator, heat_thresho
         (highlighted_areas['raster_value'].isin(heat_threshold))
     )
 
+    # Project all geometries to EPSG:5070 once
     highlighted_areas_projected = highlighted_areas.to_crs(epsg=5070)
+    states_projected = states.to_crs(epsg=5070)
+    counties_projected = counties.to_crs(epsg=5070)
 
-    selected_state_geom = states.loc[states['NAME'] == selected_state, 'geometry'].values[0] if selected_state != "Select a State" else None
-    selected_county_geom = counties.loc[(counties['STATE_NAME'] == selected_state) & (counties['NAME'] == selected_county), 'geometry'].values[0] if selected_county != "Select a County" and selected_state_geom is not None else None
+    selected_state_geom = states_projected.loc[states_projected['NAME'] == selected_state, 'geometry'].values[0] if selected_state != "Select a State" else None
+    selected_county_geom = counties_projected.loc[(counties_projected['STATE_NAME'] == selected_state) & (counties_projected['NAME'] == selected_county), 'geometry'].values[0] if selected_county != "Select a County" and selected_state_geom is not None else None
 
-    initial_location = gpd.GeoSeries([Point(highlighted_areas_projected.geometry.centroid.x.mean(), highlighted_areas_projected.geometry.centroid.y.mean())], crs=5070).to_crs(4326)[0]
-    initial_location = [initial_location.y, initial_location.x]
+    initial_location = Point(highlighted_areas_projected.geometry.centroid.x.mean(), highlighted_areas_projected.geometry.centroid.y.mean())
     initial_zoom = 4
 
     if zipcode_boundary is not None:
         zipcode_boundary_projected = zipcode_boundary.to_crs(epsg=5070)
-        centroid = zipcode_boundary_projected.geometry.centroid
-        initial_location = gpd.GeoSeries([centroid.iloc[0]], crs=5070).to_crs(4326)[0]
-        initial_location = [initial_location.y, initial_location.x]
+        initial_location = zipcode_boundary_projected.geometry.centroid.iloc[0]
         initial_zoom = 13
     elif selected_county_geom is not None:
-        county_projected = gpd.GeoSeries([selected_county_geom], crs=4326).to_crs(5070)
-        centroid = county_projected.centroid
-        initial_location = gpd.GeoSeries([centroid.iloc[0]], crs=5070).to_crs(4326)[0]
-        initial_location = [initial_location.y, initial_location.x]
+        initial_location = selected_county_geom.centroid
         initial_zoom = 8
     elif selected_state_geom is not None:
-        state_projected = gpd.GeoSeries([selected_state_geom], crs=4326).to_crs(5070)
-        centroid = state_projected.centroid
-        initial_location = gpd.GeoSeries([centroid.iloc[0]], crs=5070).to_crs(4326)[0]
-        initial_location = [initial_location.y, initial_location.x]
+        initial_location = selected_state_geom.centroid
         initial_zoom = 6
+
+    # Project initial_location back to EPSG:4326 for Folium
+    initial_location = project_geometries(initial_location, from_crs='EPSG:5070', to_crs='EPSG:4326')
+    initial_location = [initial_location.y, initial_location.x]
 
     m = folium.Map(location=initial_location, zoom_start=initial_zoom)
 
     if selected_state_geom is not None:
-        folium.GeoJson(selected_state_geom, name="State Boundary", style_function=lambda x: {'color': 'green', 'weight': 2, 'fillOpacity': 0.1}).add_to(m)
+        folium.GeoJson(project_geometries(selected_state_geom, from_crs='EPSG:5070', to_crs='EPSG:4326'), 
+                       name="State Boundary", 
+                       style_function=lambda x: {'color': 'green', 'weight': 2, 'fillOpacity': 0.1}).add_to(m)
 
     if selected_county_geom is not None:
-        folium.GeoJson(selected_county_geom, name="County Boundary", style_function=lambda x: {'color': 'yellow', 'weight': 2, 'fillOpacity': 0.7}).add_to(m)
+        folium.GeoJson(project_geometries(selected_county_geom, from_crs='EPSG:5070', to_crs='EPSG:4326'), 
+                       name="County Boundary", 
+                       style_function=lambda x: {'color': 'yellow', 'weight': 2, 'fillOpacity': 0.7}).add_to(m)
 
     if zipcode_boundary is not None:
-        folium.GeoJson(zipcode_boundary.geometry, name="ZIP Code Boundary", style_function=lambda x: {'color': 'black', 'weight': 3, 'fillOpacity': 0.5}).add_to(m)
+        folium.GeoJson(zipcode_boundary.to_crs(epsg=4326).geometry, 
+                       name="ZIP Code Boundary", 
+                       style_function=lambda x: {'color': 'black', 'weight': 3, 'fillOpacity': 0.5}).add_to(m)
 
     folium.GeoJson(
-        highlighted_areas,
+        highlighted_areas.to_crs(epsg=4326),
         style_function=lambda feature: {
             'fillColor': 'red' if feature['properties']['highlight'] else 'blue',
             'color': 'black',
@@ -224,6 +237,7 @@ def create_map(layer1_with_weighted_values, selected_hhi_indicator, heat_thresho
     m.get_root().html.add_child(folium.Element(legend_html))
 
     return m
+
 
 def create_plot(data, y_column, x_column, color_column, title, y_label, x_label, height=300, width=600):
     fig = px.bar(data, 
