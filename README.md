@@ -36,6 +36,17 @@ To update the stack:
         cdk synth # check the stack
         cdk deploy # push changes
 
+### Load Testing
+
+We use locust for load testing the deployed app.
+
+        cd dash/dash
+        locust -f load-test.py --host=https://heatmap-dev.urbantech.info
+
+Then open the [Locust dashboard](http://0.0.0.0:8089/) locally and configure and run your load test.
+
+Monitor performance on the [Cloudwatch Dashboard](https://us-east-1.console.aws.amazon.com/cloudwatch/home?region=us-east-1#dashboards/dashboard/HeatDashStreamlitDashboard?start=PT1H&end=null).
+
 ## `scraper`
 
 A containerized Batch script deployed to AWS with Terraform runs once nightly to fetch and preprocess and join the NWS and CDC data layers. One geoparquet is produced for each of the 7 days of the NWS Heat Risk forecast with area-weighted indicators joined from the CDC Heat and Health Index data (which is the same for all days). These data are stored in a public S3 bucket.
