@@ -1,5 +1,4 @@
-import numpy as np
-import folium
+import time
 import streamlit as st
 from streamlit_folium import folium_static
 import pandas as pd
@@ -105,7 +104,13 @@ st.sidebar.markdown("""
 """)
 
 # Main dashboard
+start_time = time.time()
 m = utils.create_map(layer1_with_weighted_values, selected_hhi_indicator, heat_threshold, heat_health_index_threshold, selected_state, selected_county, states, counties, zipcode_boundary)
+end_time = time.time()
+map_creation_time = end_time - start_time
+
+# Display success message with execution time
+st.success(f"Map created successfully in {map_creation_time:.2f} seconds")
 
 # Adjust map size based on sidebar toggle
 map_width, map_height = (1350, 900) if map_size_option == "Full Page" else (1000, 800)
