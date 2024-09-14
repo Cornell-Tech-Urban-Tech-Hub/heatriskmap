@@ -8,6 +8,8 @@ from aws_cdk import (
     aws_s3 as s3,
     aws_cloudfront as cloudfront,
     aws_cloudfront_origins as origins,
+    aws_logs as logs,
+    aws_cloudwatch as cloudwatch,
     Stack,
     Duration,
     CfnOutput,
@@ -44,7 +46,6 @@ class DashStack(Stack):
         bucket_name = "heat-risk-dashboard"
         heat_risk_bucket = s3.Bucket.from_bucket_name(self, "HeatRiskBucket", bucket_name)
 
-
         # Create CloudFront distribution
         distribution = cloudfront.Distribution(self, "HeatRiskDistribution",
             default_behavior=cloudfront.BehaviorOptions(
@@ -57,6 +58,13 @@ class DashStack(Stack):
             domain_names=[fqdn]
         )
 
+        # Create a log group for the Fargate service
+        log_group = logs.LogGroup(self, "HeatDashLogGroup",
+            log_group_name="/ecs/heat-dash-streamlit",
+            removal_policy=RemovalPolicy.DESTROY,
+            retention=logs.RetentionDays.ONE_WEEK
+        )
+
         # Create the Fargate service with ALB
         service = ecs_patterns.ApplicationLoadBalancedFargateService(
             self, "HeatDashFargateService",
@@ -67,7 +75,10 @@ class DashStack(Stack):
                 environment={
                     "CLOUDFRONT_URL": f"https://{distribution.distribution_domain_name}"
                 },
-                log_driver=ecs.LogDrivers.aws_logs(stream_prefix="HeatDashStreamlit"),
+                log_driver=ecs.LogDrivers.aws_logs(
+                    stream_prefix="HeatDashStreamlit",
+                    log_group=log_group
+                ),
             ),
             desired_count=2,
             cpu=16384,
@@ -89,7 +100,7 @@ class DashStack(Stack):
         )
 
         # Set up auto-scaling
-        scaling = service.service.auto_scale_task_count(max_capacity=4)
+        scaling = service.service.auto_scale_task_count(max_capacity=12)
         scaling.scale_on_cpu_utilization(
             "CpuScaling",
             target_utilization_percent=70,
@@ -97,8 +108,37 @@ class DashStack(Stack):
             scale_out_cooldown=Duration.seconds(60),
         )
 
+        # Create a CloudWatch dashboard
+        dashboard = cloudwatch.Dashboard(self, "HeatDashDashboard",
+            dashboard_name="HeatDashStreamlitDashboard"
+        )
+
+        # Add widgets to the dashboard
+        dashboard.add_widgets(
+            cloudwatch.GraphWidget(
+                title="CPU Utilization",
+                left=[service.service.metric_cpu_utilization()]
+            ),
+            cloudwatch.GraphWidget(
+                title="Memory Utilization",
+                left=[service.service.metric_memory_utilization()]
+            ),
+            cloudwatch.LogQueryWidget(
+                title="Application Logs",
+                log_group_names=[log_group.log_group_name],
+                query_lines=[
+                    "fields @timestamp, @message",
+                    "sort @timestamp desc",
+                    "limit 100"
+                ],
+                width=24
+            )
+        )
+
         # Output the DNS name of the load balancer
         CfnOutput(self, "LoadBalancerDNS", value=service.load_balancer.load_balancer_dns_name)
-
         # Output the CloudFront distribution URL
         CfnOutput(self, "CloudFrontURL", value=distribution.distribution_domain_name)
+        # Output the CloudWatch Dashboard URL
+        CfnOutput(self, "DashboardURL", 
+                  value=f"https://{self.region}.console.aws.amazon.com/cloudwatch/home?region={self.region}#dashboards:name=HeatDashStreamlitDashboard")
