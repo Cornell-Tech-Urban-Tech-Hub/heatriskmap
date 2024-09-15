@@ -24,7 +24,7 @@ class DashStack(Stack):
 
         # Define the domain name
         domain_name = "urbantech.info"
-        subdomain = "heatmap-dev"
+        subdomain = "heatmap"
         fqdn = f"{subdomain}.{domain_name}"
 
         # Create VPC and ECS Cluster with Container Insights enabled
