@@ -46,7 +46,7 @@ def load_data(selected_day):
         download_time = end_time - start_time
         
         print(f"Download and processing completed in {download_time:.2f} seconds")
-        st.success(f"Data loaded successfully in {download_time:.2f} seconds")
+        # st.success(f"Data loaded successfully in {download_time:.2f} seconds")
 
         return gdf
 
