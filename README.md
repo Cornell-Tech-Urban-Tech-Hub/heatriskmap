@@ -1,6 +1,6 @@
 # NWS Heat Risk x CDC Heat and Health Index Dashboard
 
-## TODO list
+#To Do list
 
 1. simplicity = merge the two deployments into a single stack.
 2. debugging = add unified logging to the entire stack
@@ -18,7 +18,7 @@ It consists of two parts:
 
 ## `dash`
 
-A Streamlit app packaged for deployment on Streamlit Community Cloud. Allows users to make selections of day and indicator, and threshholds for filters for both.
+A Streamlit app packaged for deployment on AWS Elastic Container Service / Fargate. Allows users to make selections of day and indicator, and threshholds for filters for both.
 
 ### Development
 
@@ -35,6 +35,17 @@ To update the stack:
         cd dash
         cdk synth # check the stack
         cdk deploy # push changes
+
+### Load Testing
+
+We use locust for load testing the deployed app.
+
+        cd dash/dash
+        locust -f load-test.py --host=https://heatmap-dev.urbantech.info
+
+Then open the [Locust dashboard](http://0.0.0.0:8089/) locally and configure and run your load test.
+
+Monitor performance on the [Cloudwatch Dashboard](https://us-east-1.console.aws.amazon.com/cloudwatch/home?region=us-east-1#dashboards/dashboard/HeatDashStreamlitDashboard?start=PT1H&end=null).
 
 ## `scraper`
 

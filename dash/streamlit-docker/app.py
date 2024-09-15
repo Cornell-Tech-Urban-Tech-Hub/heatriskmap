@@ -1,5 +1,4 @@
-import numpy as np
-import folium
+import time
 import streamlit as st
 from streamlit_folium import folium_static
 import pandas as pd
@@ -12,7 +11,7 @@ st.set_page_config(layout="wide")
 
 # Sidebar
 st.sidebar.title("Heat Risk and Health Index Dashboard")
-st.sidebar.header("Controls")
+st.sidebar.markdown("This is an experimental prototype provided for informational purposes only by the [Jacobs Urban Tech Hub](https://urbantech.cornell.edu/) as part of the [Cornell Initiative on Aging and Adaptation to Extreme Heat](https://agingandadaptation.cornell.edu/).")
 
 # Toggle for map size
 map_size_option = st.sidebar.radio("Map Size", ("Regular", "Full Page"))
@@ -105,7 +104,13 @@ st.sidebar.markdown("""
 """)
 
 # Main dashboard
+start_time = time.time()
 m = utils.create_map(layer1_with_weighted_values, selected_hhi_indicator, heat_threshold, heat_health_index_threshold, selected_state, selected_county, states, counties, zipcode_boundary)
+end_time = time.time()
+map_creation_time = end_time - start_time
+
+# Display success message with execution time
+# st.success(f"Map created successfully in {map_creation_time:.2f} seconds")
 
 # Adjust map size based on sidebar toggle
 map_width, map_height = (1350, 900) if map_size_option == "Full Page" else (1000, 800)
@@ -194,11 +199,9 @@ st.markdown("""
     }
     </style>
     <div class="footer">
-        This is an experimental prototype provided for informational purposes only by the 
-        <a href="https://urbantech.cornell.edu/" target="_blank">Jacobs Urban Tech Hub</a> 
-        as part of the 
-        <a href="https://agingandadaptation.cornell.edu/" target="_blank">Cornell Initiative on Aging and Adaptation to Extreme Heat</a>.
-        Questions? Comments? Contact us at 
+        <br>Please fill out <a href="https://cornell.ca1.qualtrics.com/jfe/form/SV_4TTfOiGyOZJNVP0" target="_blank">our survey</a> to provide feedback. 
+            <br>Bug reports to
         <a href="mailto:urbantech@cornell.edu">urbantech@cornell.edu</a>.
+
     </div>
 """, unsafe_allow_html=True)
