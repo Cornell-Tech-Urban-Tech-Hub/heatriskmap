@@ -10,6 +10,7 @@ from aws_cdk import (
     aws_cloudfront_origins as origins,
     aws_logs as logs,
     aws_cloudwatch as cloudwatch,
+    aws_cloudwatch_actions as cloudwatch_actions,
     Stack,
     Duration,
     CfnOutput,
@@ -26,9 +27,12 @@ class DashStack(Stack):
         subdomain = "heatmap-dev"
         fqdn = f"{subdomain}.{domain_name}"
 
-        # Create VPC and ECS Cluster
+        # Create VPC and ECS Cluster with Container Insights enabled
         vpc = ec2.Vpc(self, "HeatDashStreamlitVPC", max_azs=2)
-        cluster = ecs.Cluster(self, "HeatDashStreamlitCluster", vpc=vpc)
+        cluster = ecs.Cluster(self, "HeatDashStreamlitCluster", 
+            vpc=vpc,
+            container_insights=True  # Enable Container Insights
+        )
 
         # Load the Docker image
         image = ecs.ContainerImage.from_asset('streamlit-docker')
@@ -81,8 +85,8 @@ class DashStack(Stack):
                 ),
             ),
             desired_count=2,
-            cpu=16384,
-            memory_limit_mib=122880,
+            cpu=4096,
+            memory_limit_mib=8192,
             public_load_balancer=True,
             certificate=certificate,
             domain_name=fqdn,
@@ -93,24 +97,43 @@ class DashStack(Stack):
         service.target_group.configure_health_check(
             path="/",
             healthy_http_codes="200",
-            interval=Duration.seconds(60),
-            timeout=Duration.seconds(30),
-            healthy_threshold_count=3,
-            unhealthy_threshold_count=3,
+            interval=Duration.seconds(30),
+            timeout=Duration.seconds(10),
+            healthy_threshold_count=2,
+            unhealthy_threshold_count=2,
         )
 
         # Set up auto-scaling
-        scaling = service.service.auto_scale_task_count(max_capacity=12)
+        scaling = service.service.auto_scale_task_count(max_capacity=24)
         scaling.scale_on_cpu_utilization(
             "CpuScaling",
-            target_utilization_percent=70,
-            scale_in_cooldown=Duration.seconds(60),
-            scale_out_cooldown=Duration.seconds(60),
+            target_utilization_percent=50,
+            scale_in_cooldown=Duration.seconds(300),
+            scale_out_cooldown=Duration.seconds(300),
+        )
+
+        # Add memory utilization scaling
+        scaling.scale_on_memory_utilization(
+            "MemoryScaling",
+            target_utilization_percent=50,
+            scale_in_cooldown=Duration.seconds(300),
+            scale_out_cooldown=Duration.seconds(300),
         )
 
         # Create a CloudWatch dashboard
         dashboard = cloudwatch.Dashboard(self, "HeatDashDashboard",
             dashboard_name="HeatDashStreamlitDashboard"
+        )
+
+        # Create a metric for cluster-level RunningTaskCount using Container Insights
+        cluster_running_task_count_metric = cloudwatch.Metric(
+            namespace="ECS/ContainerInsights",
+            metric_name="TaskCount",
+            dimensions_map={
+                "ClusterName": cluster.cluster_name
+            },
+            statistic="Average",
+            period=Duration.minutes(1)
         )
 
         # Add widgets to the dashboard
@@ -123,6 +146,10 @@ class DashStack(Stack):
                 title="Memory Utilization",
                 left=[service.service.metric_memory_utilization()]
             ),
+            cloudwatch.GraphWidget(
+                title="Cluster Running Task Count",
+                left=[cluster_running_task_count_metric]
+            ),
             cloudwatch.LogQueryWidget(
                 title="Application Logs",
                 log_group_names=[log_group.log_group_name],
@@ -132,6 +159,33 @@ class DashStack(Stack):
                     "limit 100"
                 ],
                 width=24
+            )
+        )
+
+        # Create CloudWatch alarms for CPU and Memory utilization
+        cpu_alarm = cloudwatch.Alarm(self, "CPUUtilizationAlarm",
+            metric=service.service.metric_cpu_utilization(),
+            threshold=70,
+            evaluation_periods=3,
+            datapoints_to_alarm=2,
+        )
+
+        memory_alarm = cloudwatch.Alarm(self, "MemoryUtilizationAlarm",
+            metric=service.service.metric_memory_utilization(),
+            threshold=70,
+            evaluation_periods=3,
+            datapoints_to_alarm=2,
+        )
+
+        # Add alarms to dashboard
+        dashboard.add_widgets(
+            cloudwatch.AlarmWidget(
+                title="CPU Utilization Alarm",
+                alarm=cpu_alarm
+            ),
+            cloudwatch.AlarmWidget(
+                title="Memory Utilization Alarm",
+                alarm=memory_alarm
             )
         )
 
