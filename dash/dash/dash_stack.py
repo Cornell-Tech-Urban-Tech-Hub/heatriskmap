@@ -85,8 +85,10 @@ class DashStack(Stack):
                 ),
             ),
             desired_count=2,
-            cpu=4096,
-            memory_limit_mib=8192,
+            # cpu=4096,
+            # memory_limit_mib=8192,
+            cpu=16384,  # This corresponds to 16 vCPU (maximum)
+            memory_limit_mib=122880,
             public_load_balancer=True,
             certificate=certificate,
             domain_name=fqdn,
