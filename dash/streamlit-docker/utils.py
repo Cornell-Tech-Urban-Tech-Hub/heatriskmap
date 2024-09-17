@@ -11,9 +11,11 @@ import plotly.express as px
 import folium
 from io import BytesIO
 import pytz
-from shapely.geometry import Point
+from shapely.geometry import Point, mapping
 import pyarrow.parquet as pq
 from shapely import wkb
+import json
+from shapely.errors import GEOSException
 
 @st.cache_data(ttl=300)  # Increased TTL to 5 min
 def load_data(selected_day):
@@ -168,6 +170,19 @@ def create_map(layer1_with_weighted_values, selected_hhi_indicator, heat_thresho
     states_projected = states.to_crs(epsg=5070)
     counties_projected = counties.to_crs(epsg=5070)
 
+    # Simplify geometries with error handling
+    tolerance = 1000  # Adjust this value to balance between speed and accuracy
+    
+    def safe_simplify(geometry):
+        try:
+            return geometry.simplify(tolerance)
+        except GEOSException:
+            return geometry
+
+    highlighted_areas_projected['geometry'] = highlighted_areas_projected.geometry.apply(safe_simplify)
+    states_projected['geometry'] = states_projected.geometry.apply(safe_simplify)
+    counties_projected['geometry'] = counties_projected.geometry.apply(safe_simplify)
+
     selected_state_geom = states_projected.loc[states_projected['NAME'] == selected_state, 'geometry'].values[0] if selected_state != "Select a State" else None
     selected_county_geom = counties_projected.loc[(counties_projected['STATE_NAME'] == selected_state) & (counties_projected['NAME'] == selected_county), 'geometry'].values[0] if selected_county != "Select a County" and selected_state_geom is not None else None
 
@@ -176,6 +191,7 @@ def create_map(layer1_with_weighted_values, selected_hhi_indicator, heat_thresho
 
     if zipcode_boundary is not None:
         zipcode_boundary_projected = zipcode_boundary.to_crs(epsg=5070)
+        zipcode_boundary_projected['geometry'] = zipcode_boundary_projected.geometry.apply(safe_simplify)
         initial_location = zipcode_boundary_projected.geometry.centroid.iloc[0]
         initial_zoom = 13
     elif selected_county_geom is not None:
@@ -192,22 +208,22 @@ def create_map(layer1_with_weighted_values, selected_hhi_indicator, heat_thresho
     m = folium.Map(location=initial_location, zoom_start=initial_zoom)
 
     if selected_state_geom is not None:
-        folium.GeoJson(project_geometries(selected_state_geom, from_crs='EPSG:5070', to_crs='EPSG:4326'), 
+        folium.GeoJson(json.dumps(mapping(project_geometries(selected_state_geom, from_crs='EPSG:5070', to_crs='EPSG:4326'))),
                        name="State Boundary", 
                        style_function=lambda x: {'color': 'green', 'weight': 2, 'fillOpacity': 0.1}).add_to(m)
 
     if selected_county_geom is not None:
-        folium.GeoJson(project_geometries(selected_county_geom, from_crs='EPSG:5070', to_crs='EPSG:4326'), 
+        folium.GeoJson(json.dumps(mapping(project_geometries(selected_county_geom, from_crs='EPSG:5070', to_crs='EPSG:4326'))),
                        name="County Boundary", 
                        style_function=lambda x: {'color': 'yellow', 'weight': 2, 'fillOpacity': 0.7}).add_to(m)
 
     if zipcode_boundary is not None:
-        folium.GeoJson(zipcode_boundary.to_crs(epsg=4326).geometry, 
+        folium.GeoJson(json.dumps(mapping(zipcode_boundary_projected.to_crs(epsg=4326).geometry.iloc[0])),
                        name="ZIP Code Boundary", 
                        style_function=lambda x: {'color': 'black', 'weight': 3, 'fillOpacity': 0.5}).add_to(m)
 
     folium.GeoJson(
-        highlighted_areas.to_crs(epsg=4326),
+        highlighted_areas_projected.to_crs(epsg=4326).__geo_interface__,
         style_function=lambda feature: {
             'fillColor': 'red' if feature['properties']['highlight'] else 'blue',
             'color': 'black',
@@ -237,7 +253,6 @@ def create_map(layer1_with_weighted_values, selected_hhi_indicator, heat_thresho
     m.get_root().html.add_child(folium.Element(legend_html))
 
     return m
-
 
 def create_plot(data, y_column, x_column, color_column, title, y_label, x_label, height=300, width=600):
     fig = px.bar(data, 
