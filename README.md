@@ -1,4 +1,4 @@
-# NWS Heat Risk x CDC Heat and Health Index Dashboard
+# NWS Heat Risk x CDC Heat and Health Index Dashboard — SANDBOX VERSION
 
 #To Do list
 
@@ -8,12 +8,14 @@
 
 ## description
 
-This application is an experimental dashboard that two new indices published by federal agencies to help understand the health impacts of extreme heat — the NWS Heat Risk and the CDC Heat and Health Index.
+This is a SANDBOX version of [this app](https://github.com/Cornell-Tech-Urban-Tech-Hub/heat-risk-vulnerability-dashboard), an experimental dashboard that two new indices published by federal agencies to help understand the health impacts of extreme heat — the NWS Heat Risk and the CDC Heat and Health Index.
 
 It consists of two parts:
 
 - A Python **scraper** script that is deployed to AWS with Terraform, and runs an AWS Batch job nightly to fetch and preprocess data from the NWS and CDC.
 - A Python web **dash** streamlit app that is deployed with to AWS Fargate with AWS CDK.
+
+This SANDBOX version allows users to select a start date to view historical forecast data.
 
 
 ## `dash`

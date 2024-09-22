@@ -24,7 +24,7 @@ class DashStack(Stack):
 
         # Define the domain name
         domain_name = "urbantech.info"
-        subdomain = "heatmap"
+        subdomain = "heatmap-sandbox"
         fqdn = f"{subdomain}.{domain_name}"
 
         # Create VPC and ECS Cluster with Container Insights enabled
@@ -64,7 +64,7 @@ class DashStack(Stack):
 
         # Create a log group for the Fargate service
         log_group = logs.LogGroup(self, "HeatDashLogGroup",
-            log_group_name="/ecs/heat-dash-streamlit",
+            log_group_name="/ecs/heat-dash-streamlit-sandbox",
             removal_policy=RemovalPolicy.DESTROY,
             retention=logs.RetentionDays.ONE_WEEK
         )

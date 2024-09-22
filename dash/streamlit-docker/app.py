@@ -37,6 +37,11 @@ heat_threshold = st.sidebar.multiselect("Select Heat Risk Levels", [0, 1, 2, 3, 
 with st.sidebar.expander('Learn more about heat risk levels'):
     st.markdown(utils.get_heat_risk_levels_description())
 
+
+#TODO: add a util function to scan the S3 bucket for available dates
+#TODO: add a date picker for the user to select the start date
+#TODO: pass the start date to the load_data function to get the data for that date
+
 # Load the heat risk data
 try:
     layer1_with_weighted_values = utils.load_data(selected_day)

@@ -13,8 +13,8 @@ env=cdk.Environment(
 
 DashStack(
     app, 
-    "HeatDashStreamlit-Production",
-    description="Heat Dashboard using Streamlit, ECS Fargate, and CloudFront.",
+    "HeatDashStreamlit-Sandbox",
+    description="Heat Dashboard SANDBOX using Streamlit, ECS Fargate, and CloudFront.",
     env=env
     )
 
