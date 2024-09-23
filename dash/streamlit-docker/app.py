@@ -1,6 +1,6 @@
 import time
 import streamlit as st
-from streamlit_folium import folium_static
+from streamlit_folium import st_folium
 import pandas as pd
 from datetime import datetime, timedelta
 import utils
@@ -105,8 +105,9 @@ map_creation_time = end_time - start_time
 
 # Set map size
 map_width, map_height = 1000, 700
-folium_static(m, width=map_width, height=map_height)
 
+# Use st_folium to display the map
+st_folium(m, width=map_width, height=map_height, returned_objects=["last_active_drawing", "last_clicked"])
 
 if selected_state != "Select a State" or selected_county != "Select a County":
     if selected_county != "Select a County" and selected_state != "Select a State":

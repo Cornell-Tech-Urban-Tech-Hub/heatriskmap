@@ -191,36 +191,18 @@ def create_map(layer1_with_weighted_values, selected_hhi_indicator, heat_thresho
     initial_location = [39.8283, -98.5795]  # Approximate center of the continental US
     initial_zoom = 4
 
+    # Determine the bounds for zooming
     if zipcode_boundary is not None and not zipcode_boundary.empty:
-        zipcode_boundary_projected = zipcode_boundary.to_crs(epsg=5070)
-        zipcode_boundary_projected['geometry'] = zipcode_boundary_projected.geometry.apply(safe_simplify)
-        bounds = zipcode_boundary_projected.total_bounds
-        initial_location = [(bounds[1] + bounds[3]) / 2, (bounds[0] + bounds[2]) / 2]
+        zoom_area = zipcode_boundary.to_crs(epsg=4326)
         initial_zoom = 13
     elif selected_county != "Select a County" and selected_state != "Select a State":
-        county_geom = counties_projected[(counties_projected['STATE_NAME'] == selected_state) & (counties_projected['NAME'] == selected_county)]
-        if not county_geom.empty:
-            bounds = county_geom.total_bounds
-            initial_location = [(bounds[1] + bounds[3]) / 2, (bounds[0] + bounds[2]) / 2]
-            initial_zoom = 8
+        zoom_area = counties[(counties['STATE_NAME'] == selected_state) & (counties['NAME'] == selected_county)].to_crs(epsg=4326)
+        initial_zoom = 8
     elif selected_state != "Select a State":
-        state_geom = states_projected[states_projected['NAME'] == selected_state]
-        if not state_geom.empty:
-            bounds = state_geom.total_bounds
-            initial_location = [(bounds[1] + bounds[3]) / 2, (bounds[0] + bounds[2]) / 2]
-            initial_zoom = 6
-
-    # Ensure initial_location is centered on the US if no specific location is provided
-    if initial_location == [39.8283, -98.5795]:
-        initial_location = [39.8283, -98.5795]  # Center of the continental US
+        zoom_area = states[states['NAME'] == selected_state].to_crs(epsg=4326)
+        initial_zoom = 6
     else:
-        # Project initial_location back to EPSG:4326 for Folium
-        initial_location = project_geometries(Point(initial_location[1], initial_location[0]), from_crs='EPSG:5070', to_crs='EPSG:4326')
-        initial_location = [initial_location.y, initial_location.x]
-
-    # initial_location = Point(highlighted_areas_projected.geometry.centroid.x.mean(), highlighted_areas_projected.geometry.centroid.y.mean())
-    initial_zoom = 4
-
+        zoom_area = None
 
     # Create the map object
     m = folium.Map(location=initial_location, zoom_start=initial_zoom, tiles='Cartodb Positron')
@@ -242,6 +224,7 @@ def create_map(layer1_with_weighted_values, selected_hhi_indicator, heat_thresho
             'fillOpacity': 0.7 if feature['properties']['highlight'] else 0.3,
         }
 
+    # Add the GeoJson layer
     folium.GeoJson(
         highlighted_areas_projected.to_crs(epsg=4326).__geo_interface__,
         style_function=style_function,
@@ -253,19 +236,13 @@ def create_map(layer1_with_weighted_values, selected_hhi_indicator, heat_thresho
         )
     ).add_to(m)
 
-    # # Update legend to reflect the new color scheme
-    # legend_html = f'''
-    #     <div style="position: fixed; bottom: 50px; left: 50px; width: 220px; 
-    #                 border:2px solid grey; z-index:9999; font-size:14px;
-    #                 background-color:white;
-    #                 ">
-    #     &nbsp; Legend <br>
-    #     {''.join([f"&nbsp; <i class='fa fa-square fa-1x' style='color:{color_map[i]}'></i> Heat Risk Level {level}<br>" for i, level in enumerate(unique_risk_levels)])}
-    #     </div>
-    #     '''
-    # m.get_root().html.add_child(folium.Element(legend_html))
+    # Fit bounds if a specific area is selected
+    if zoom_area is not None and not zoom_area.empty:
+        bounds = zoom_area.total_bounds
+        m.fit_bounds([[bounds[1], bounds[0]], [bounds[3], bounds[2]]])
 
     return m
+
 def create_plot(data, y_column, x_column, color_column, title, y_label, x_label, height=300, width=600):
     fig = px.bar(data, 
                  y=y_column, 
