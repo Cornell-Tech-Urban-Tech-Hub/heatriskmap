@@ -12,6 +12,7 @@ st.set_page_config(layout="wide")
 # Sidebar
 st.sidebar.title("Heat Risk and Health Index Dashboard")
 st.sidebar.markdown("This is an experimental prototype provided for informational purposes only by the [Jacobs Urban Tech Hub](https://urbantech.cornell.edu/) as part of the [Cornell Initiative on Aging and Adaptation to Extreme Heat](https://agingandadaptation.cornell.edu/).")
+st.sidebar.markdown("Please fill out a [survey](https://cornell.ca1.qualtrics.com/jfe/form/SV_4TTfOiGyOZJNVP0) to provide feedback. Bug reports [here](mailto:urbantech@cornell.edu)")
 
 # # Toggle for map size
 # map_size_option = st.sidebar.radio("Map Size", ("Regular", "Full Page"))
@@ -117,13 +118,13 @@ map_width, map_height = 1000, 700
 folium_static(m, width=map_width, height=map_height)
 
 
-st.markdown(f'''
-<div style="position: relative; width: 400px; height: 150px; padding: 10px;">
-    <b>Legend</b> <br>
-    <span style="display: inline-block; width: 20px; height: 20px; background-color: red; margin-right: 10px;"></span> Highlighted Areas (Heat Risk {heat_threshold} & HHI {heat_health_index_threshold}th percentile)<br>
-    <span style="display: inline-block; width: 20px; height: 20px; background-color: blue; margin-right: 10px;"></span> Other Areas
-</div>
-''', unsafe_allow_html=True)
+# st.markdown(f'''
+# <div style="position: relative; width: 400px; height: 150px; padding: 10px;">
+#     <b>Legend</b> <br>
+#     <span style="display: inline-block; width: 20px; height: 20px; background-color: red; margin-right: 10px;"></span> Highlighted Areas (Heat Risk {heat_threshold} & HHI {heat_health_index_threshold}th percentile)<br>
+#     <span style="display: inline-block; width: 20px; height: 20px; background-color: blue; margin-right: 10px;"></span> Other Areas
+# </div>
+# ''', unsafe_allow_html=True)
 
 if selected_state != "Select a State" or selected_county != "Select a County":
     if selected_county != "Select a County" and selected_state != "Select a State":
@@ -183,26 +184,26 @@ if selected_state != "Select a State" or selected_county != "Select a County":
     else:
         st.warning('No data available for the selected state or county.')
 else:
-    st.subheader('Select a State or County to get key summaries')
+    st.write('Select a State or County to get key summaries')
 
-# Add the disclaimer to the footer
-st.markdown("""
-    <style>
-    .footer {
-        position: fixed;
-        right: 0;
-        bottom: 0;
-        width: 30%;
-        background-color: #f1f1f1;
-        color: black;
-        text-align: center;
-        padding: 10px;
-    }
-    </style>
-    <div class="footer">
-        <br>Please fill out <a href="https://cornell.ca1.qualtrics.com/jfe/form/SV_4TTfOiGyOZJNVP0" target="_blank">our survey</a> to provide feedback. 
-            <br>Bug reports to
-        <a href="mailto:urbantech@cornell.edu">urbantech@cornell.edu</a>.
+# # Add the disclaimer to the footer
+# st.markdown("""
+#     <style>
+#     .footer {
+#         position: fixed;
+#         right: 0;
+#         bottom: 0;
+#         width: 30%;
+#         background-color: #f1f1f1;
+#         color: black;
+#         text-align: center;
+#         padding: 10px;
+#     }
+#     </style>
+#     <div class="footer">
+#         <br>Please fill out <a href="https://cornell.ca1.qualtrics.com/jfe/form/SV_4TTfOiGyOZJNVP0" target="_blank">our survey</a> to provide feedback. 
+#             <br>Bug reports to
+#         <a href="mailto:urbantech@cornell.edu">urbantech@cornell.edu</a>.
 
-    </div>
-""", unsafe_allow_html=True)
+#     </div>
+# """, unsafe_allow_html=True)

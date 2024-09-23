@@ -210,9 +210,17 @@ def create_map(layer1_with_weighted_values, selected_hhi_indicator, heat_thresho
             initial_location = [(bounds[1] + bounds[3]) / 2, (bounds[0] + bounds[2]) / 2]
             initial_zoom = 6
 
-    # Project initial_location back to EPSG:4326 for Folium
-    initial_location = project_geometries(Point(initial_location[1], initial_location[0]), from_crs='EPSG:5070', to_crs='EPSG:4326')
-    initial_location = [initial_location.y, initial_location.x]
+    # Ensure initial_location is centered on the US if no specific location is provided
+    if initial_location == [39.8283, -98.5795]:
+        initial_location = [39.8283, -98.5795]  # Center of the continental US
+    else:
+        # Project initial_location back to EPSG:4326 for Folium
+        initial_location = project_geometries(Point(initial_location[1], initial_location[0]), from_crs='EPSG:5070', to_crs='EPSG:4326')
+        initial_location = [initial_location.y, initial_location.x]
+
+    # initial_location = Point(highlighted_areas_projected.geometry.centroid.x.mean(), highlighted_areas_projected.geometry.centroid.y.mean())
+    initial_zoom = 4
+
 
     # Create the map object
     m = folium.Map(location=initial_location, zoom_start=initial_zoom, tiles='Cartodb Positron')
@@ -245,17 +253,17 @@ def create_map(layer1_with_weighted_values, selected_hhi_indicator, heat_thresho
         )
     ).add_to(m)
 
-    # Update legend to reflect the new color scheme
-    legend_html = f'''
-        <div style="position: fixed; bottom: 50px; left: 50px; width: 220px; 
-                    border:2px solid grey; z-index:9999; font-size:14px;
-                    background-color:white;
-                    ">
-        &nbsp; Legend <br>
-        {''.join([f"&nbsp; <i class='fa fa-square fa-1x' style='color:{color_map[i]}'></i> Heat Risk Level {level}<br>" for i, level in enumerate(unique_risk_levels)])}
-        </div>
-        '''
-    m.get_root().html.add_child(folium.Element(legend_html))
+    # # Update legend to reflect the new color scheme
+    # legend_html = f'''
+    #     <div style="position: fixed; bottom: 50px; left: 50px; width: 220px; 
+    #                 border:2px solid grey; z-index:9999; font-size:14px;
+    #                 background-color:white;
+    #                 ">
+    #     &nbsp; Legend <br>
+    #     {''.join([f"&nbsp; <i class='fa fa-square fa-1x' style='color:{color_map[i]}'></i> Heat Risk Level {level}<br>" for i, level in enumerate(unique_risk_levels)])}
+    #     </div>
+    #     '''
+    # m.get_root().html.add_child(folium.Element(legend_html))
 
     return m
 def create_plot(data, y_column, x_column, color_column, title, y_label, x_label, height=300, width=600):
