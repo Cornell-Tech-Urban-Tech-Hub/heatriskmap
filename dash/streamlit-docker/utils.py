@@ -189,13 +189,17 @@ def create_map(layer1_with_weighted_values, selected_hhi_indicator, heat_thresho
         st.warning("The data is empty. Please check your inputs.")
         return None
 
+    # Filter out rows where raster_value is not in heat_threshold
+    layer1_with_weighted_values = layer1_with_weighted_values[layer1_with_weighted_values['raster_value'].isin(heat_threshold)]
+
+    if layer1_with_weighted_values.empty:
+        st.warning("No data matches the selected heat threshold. Please adjust your inputs.")
+        return None
+
     percentile_threshold = np.percentile(layer1_with_weighted_values[selected_hhi_indicator], heat_health_index_threshold)
 
     highlighted_areas = layer1_with_weighted_values.copy()
-    highlighted_areas['highlight'] = (
-        (highlighted_areas[selected_hhi_indicator] >= percentile_threshold) & 
-        (highlighted_areas['raster_value'].isin(heat_threshold))
-    )
+    highlighted_areas['highlight'] = highlighted_areas[selected_hhi_indicator] >= percentile_threshold
 
     # Project all geometries to EPSG:5070 once
     highlighted_areas_projected = highlighted_areas.to_crs(epsg=5070)
@@ -215,53 +219,47 @@ def create_map(layer1_with_weighted_values, selected_hhi_indicator, heat_thresho
     states_projected['geometry'] = states_projected.geometry.apply(safe_simplify)
     counties_projected['geometry'] = counties_projected.geometry.apply(safe_simplify)
 
-    selected_state_geom = states_projected.loc[states_projected['NAME'] == selected_state, 'geometry'].values[0] if selected_state != "Select a State" else None
-    selected_county_geom = counties_projected.loc[(counties_projected['STATE_NAME'] == selected_state) & (counties_projected['NAME'] == selected_county), 'geometry'].values[0] if selected_county != "Select a County" and selected_state_geom is not None else None
-
-    initial_location = Point(highlighted_areas_projected.geometry.centroid.x.mean(), highlighted_areas_projected.geometry.centroid.y.mean())
+    # Set initial map center and zoom to continental US
+    initial_location = [39.8283, -98.5795]  # Approximate center of the continental US
     initial_zoom = 4
 
-    if zipcode_boundary is not None:
-        zipcode_boundary_projected = zipcode_boundary.to_crs(epsg=5070)
-        zipcode_boundary_projected['geometry'] = zipcode_boundary_projected.geometry.apply(safe_simplify)
-        initial_location = zipcode_boundary_projected.geometry.centroid.iloc[0]
+    # Determine the bounds for zooming
+    if zipcode_boundary is not None and not zipcode_boundary.empty:
+        zoom_area = zipcode_boundary.to_crs(epsg=4326)
         initial_zoom = 13
-    elif selected_county_geom is not None:
-        initial_location = selected_county_geom.centroid
+    elif selected_county != "Select a County" and selected_state != "Select a State":
+        zoom_area = counties[(counties['STATE_NAME'] == selected_state) & (counties['NAME'] == selected_county)].to_crs(epsg=4326)
         initial_zoom = 8
-    elif selected_state_geom is not None:
-        initial_location = selected_state_geom.centroid
+    elif selected_state != "Select a State":
+        zoom_area = states[states['NAME'] == selected_state].to_crs(epsg=4326)
         initial_zoom = 6
+    else:
+        zoom_area = None
 
-    # Project initial_location back to EPSG:4326 for Folium
-    initial_location = project_geometries(initial_location, from_crs='EPSG:5070', to_crs='EPSG:4326')
-    initial_location = [initial_location.y, initial_location.x]
+    # Create the map object
+    m = folium.Map(location=initial_location, zoom_start=initial_zoom, tiles='Cartodb Positron')
 
-    m = folium.Map(location=initial_location, zoom_start=initial_zoom)
+    # Create a mapping of risk levels to color indices
+    unique_risk_levels = sorted(highlighted_areas['raster_value'].unique())
+    risk_to_color_index = {level: i for i, level in enumerate(unique_risk_levels)}
 
-    if selected_state_geom is not None:
-        folium.GeoJson(json.dumps(mapping(project_geometries(selected_state_geom, from_crs='EPSG:5070', to_crs='EPSG:4326'))),
-                       name="State Boundary", 
-                       style_function=lambda x: {'color': 'green', 'weight': 2, 'fillOpacity': 0.1}).add_to(m)
+    # Adjust color map based on the number of unique heat risk levels in the filtered data
+    color_map = px.colors.sequential.Reds[-len(unique_risk_levels):]  # Use the most intense colors from the Reds color scale
 
-    if selected_county_geom is not None:
-        folium.GeoJson(json.dumps(mapping(project_geometries(selected_county_geom, from_crs='EPSG:5070', to_crs='EPSG:4326'))),
-                       name="County Boundary", 
-                       style_function=lambda x: {'color': 'yellow', 'weight': 2, 'fillOpacity': 0.7}).add_to(m)
-
-    if zipcode_boundary is not None:
-        folium.GeoJson(json.dumps(mapping(zipcode_boundary_projected.to_crs(epsg=4326).geometry.iloc[0])),
-                       name="ZIP Code Boundary", 
-                       style_function=lambda x: {'color': 'black', 'weight': 3, 'fillOpacity': 0.5}).add_to(m)
-
-    folium.GeoJson(
-        highlighted_areas_projected.to_crs(epsg=4326).__geo_interface__,
-        style_function=lambda feature: {
-            'fillColor': 'red' if feature['properties']['highlight'] else 'blue',
+    def style_function(feature):
+        risk_level = feature['properties']['raster_value']
+        color_index = risk_to_color_index.get(risk_level, 0)  # Default to 0 if risk level is not found
+        return {
+            'fillColor': color_map[color_index],
             'color': 'black',
             'weight': 0.1,
             'fillOpacity': 0.7 if feature['properties']['highlight'] else 0.3,
-        },
+        }
+
+    # Add the GeoJson layer
+    folium.GeoJson(
+        highlighted_areas_projected.to_crs(epsg=4326).__geo_interface__,
+        style_function=style_function,
         tooltip=folium.GeoJsonTooltip(
             fields=[selected_hhi_indicator, 'raster_value'],
             aliases=[selected_hhi_indicator.replace('weighted_', ''), 'Heat Risk Level:'],
@@ -270,19 +268,10 @@ def create_map(layer1_with_weighted_values, selected_hhi_indicator, heat_thresho
         )
     ).add_to(m)
 
-    legend_html = f'''
-        <div style="position: fixed; bottom: 50px; left: 50px; width: 220px; height: 90px; 
-                    border:2px solid grey; z-index:9999; font-size:14px;
-                    background-color:white;
-                    ">
-        &nbsp; Legend <br>
-        &nbsp; <i class="fa fa-square fa-1x"
-                    style="color:red"></i> Highlighted Areas (Heat Risk {heat_threshold} & HHI {heat_health_index_threshold}th percentile)<br>
-        &nbsp; <i class="fa fa-square fa-1x"
-                    style="color:blue"></i> Other Areas
-        </div>
-        '''
-    m.get_root().html.add_child(folium.Element(legend_html))
+    # Fit bounds if a specific area is selected
+    if zoom_area is not None and not zoom_area.empty:
+        bounds = zoom_area.total_bounds
+        m.fit_bounds([[bounds[1], bounds[0]], [bounds[3], bounds[2]]])
 
     return m
 

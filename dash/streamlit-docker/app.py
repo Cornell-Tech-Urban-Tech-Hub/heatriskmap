@@ -1,6 +1,6 @@
 import time
 import streamlit as st
-from streamlit_folium import folium_static
+from streamlit_folium import st_folium
 import pandas as pd
 from datetime import datetime, timedelta
 import utils
@@ -16,8 +16,7 @@ st.sidebar.markdown("This is an experimental prototype provided for informationa
 
 st.sidebar.markdown("This sandbox allows you to view past data sequences. For the most recent data, please visit the [Heat Risk and Health Index Dashboard](https://heatmap.urbantech.info/).")
 
-# Toggle for map size REMOVED
-map_size_option = "Regular"
+st.sidebar.markdown("Please fill out a [survey](https://cornell.ca1.qualtrics.com/jfe/form/SV_4TTfOiGyOZJNVP0) to provide feedback. Bug reports [here](mailto:urbantech@cornell.edu)")
 
 # Day selection
 tz = pytz.timezone('America/New_York')
@@ -124,20 +123,11 @@ m = utils.create_map(layer1_with_weighted_values, selected_hhi_indicator, heat_t
 end_time = time.time()
 map_creation_time = end_time - start_time
 
-# Display success message with execution time
-# st.success(f"Map created successfully in {map_creation_time:.2f} seconds")
+# Set map size
+map_width, map_height = 1000, 700
 
-# Adjust map size based on sidebar toggle
-map_width, map_height = (1350, 900) if map_size_option == "Full Page" else (1000, 800)
-folium_static(m, width=map_width, height=map_height)
-
-st.markdown(f'''
-<div style="position: relative; width: 400px; height: 150px; padding: 10px;">
-    <b>Legend</b> <br>
-    <span style="display: inline-block; width: 20px; height: 20px; background-color: red; margin-right: 10px;"></span> Highlighted Areas (Heat Risk {heat_threshold} & HHI {heat_health_index_threshold}th percentile)<br>
-    <span style="display: inline-block; width: 20px; height: 20px; background-color: blue; margin-right: 10px;"></span> Other Areas
-</div>
-''', unsafe_allow_html=True)
+# Use st_folium to display the map
+st_folium(m, width=map_width, height=map_height, returned_objects=["last_active_drawing", "last_clicked"])
 
 # Default to select "New York" state
 selected_state = "New York"
@@ -200,26 +190,4 @@ if selected_state != "Select a State" or selected_county != "Select a County":
     else:
         st.warning('No data available for the selected state or county.')
 else:
-    st.subheader('Select a State or County to get key summaries')
-
-# Add the disclaimer to the footer
-st.markdown("""
-    <style>
-    .footer {
-        position: fixed;
-        right: 0;
-        bottom: 0;
-        width: 30%;
-        background-color: #f1f1f1;
-        color: black;
-        text-align: center;
-        padding: 10px;
-    }
-    </style>
-    <div class="footer">
-        <br>Please fill out <a href="https://cornell.ca1.qualtrics.com/jfe/form/SV_4TTfOiGyOZJNVP0" target="_blank">our survey</a> to provide feedback. 
-            <br>Bug reports to
-        <a href="mailto:urbantech@cornell.edu">urbantech@cornell.edu</a>.
-
-    </div>
-""", unsafe_allow_html=True)
+    st.write('Select a State or County to get key summaries')
