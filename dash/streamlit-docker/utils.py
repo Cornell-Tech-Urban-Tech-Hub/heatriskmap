@@ -21,7 +21,8 @@ import re
 
 def scan_archive_dates():
     cloudfront_url = os.environ.get('CLOUDFRONT_URL', 'https://heat-risk-dashboard.s3.amazonaws.com')
-    bucket_name = cloudfront_url.split('//')[1].split('.')[0]
+    bucket_name = "heat-risk-dashboard"
+    st.write(f"Scanning S3 bucket: {bucket_name} for available dates...")
     s3 = boto3.client('s3')
 
     paginator = s3.get_paginator('list_objects_v2')
