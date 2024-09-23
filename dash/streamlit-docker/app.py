@@ -13,12 +13,12 @@ st.set_page_config(layout="wide")
 st.sidebar.title("Heat Risk and Health Index Dashboard")
 st.sidebar.markdown("This is an experimental prototype provided for informational purposes only by the [Jacobs Urban Tech Hub](https://urbantech.cornell.edu/) as part of the [Cornell Initiative on Aging and Adaptation to Extreme Heat](https://agingandadaptation.cornell.edu/).")
 
-# Toggle for map size
-map_size_option = st.sidebar.radio("Map Size", ("Regular", "Full Page"))
+# # Toggle for map size
+# map_size_option = st.sidebar.radio("Map Size", ("Regular", "Full Page"))
 
-# Encourage the user to collapse the sidebar for full-page view
-if map_size_option == "Full Page":
-    st.sidebar.info("For a better view, you can hide the sidebar by clicking the arrow at the top-left corner.")
+# # Encourage the user to collapse the sidebar for full-page view
+# if map_size_option == "Full Page":
+#     st.sidebar.info("For a better view, you can hide the sidebar by clicking the arrow at the top-left corner.")
 
 # Day selection
 tz = pytz.timezone('America/New_York')
@@ -112,9 +112,10 @@ map_creation_time = end_time - start_time
 # Display success message with execution time
 # st.success(f"Map created successfully in {map_creation_time:.2f} seconds")
 
-# Adjust map size based on sidebar toggle
-map_width, map_height = (1350, 900) if map_size_option == "Full Page" else (1000, 800)
+# Set map size
+map_width, map_height = 1000, 700
 folium_static(m, width=map_width, height=map_height)
+
 
 st.markdown(f'''
 <div style="position: relative; width: 400px; height: 150px; padding: 10px;">
