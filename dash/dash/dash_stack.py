@@ -3,14 +3,11 @@ from aws_cdk import (
     aws_ecs as ecs,
     aws_ecs_patterns as ecs_patterns,
     aws_route53 as route53,
-    aws_route53_targets as targets,
     aws_certificatemanager as acm,
     aws_s3 as s3,
-    aws_cloudfront as cloudfront,
-    aws_cloudfront_origins as origins,
     aws_logs as logs,
     aws_cloudwatch as cloudwatch,
-    aws_cloudwatch_actions as cloudwatch_actions,
+    aws_iam as iam,
     Stack,
     Duration,
     CfnOutput,
@@ -31,7 +28,7 @@ class DashStack(Stack):
         vpc = ec2.Vpc(self, "HeatDashStreamlitVPC", max_azs=2)
         cluster = ecs.Cluster(self, "HeatDashStreamlitCluster", 
             vpc=vpc,
-            container_insights=True  # Enable Container Insights
+            container_insights=True
         )
 
         # Load the Docker image
@@ -46,21 +43,9 @@ class DashStack(Stack):
             validation=acm.CertificateValidation.from_dns(hosted_zone)
         )
 
-        # Reference or create S3 bucket for heat risk data
+        # Reference existing S3 bucket for heat risk data
         bucket_name = "heat-risk-dashboard"
         heat_risk_bucket = s3.Bucket.from_bucket_name(self, "HeatRiskBucket", bucket_name)
-
-        # Create CloudFront distribution
-        distribution = cloudfront.Distribution(self, "HeatRiskDistribution",
-            default_behavior=cloudfront.BehaviorOptions(
-                origin=origins.S3Origin(heat_risk_bucket),
-                viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-                allowed_methods=cloudfront.AllowedMethods.ALLOW_GET_HEAD,
-                cached_methods=cloudfront.CachedMethods.CACHE_GET_HEAD
-            ),
-            certificate=certificate,
-            domain_names=[fqdn]
-        )
 
         # Create a log group for the Fargate service
         log_group = logs.LogGroup(self, "HeatDashLogGroup",
@@ -77,7 +62,7 @@ class DashStack(Stack):
                 image=image,
                 container_port=8501,
                 environment={
-                    "CLOUDFRONT_URL": f"https://{distribution.distribution_domain_name}"
+                    "S3_BUCKET_NAME": bucket_name
                 },
                 log_driver=ecs.LogDrivers.aws_logs(
                     stream_prefix="HeatDashStreamlit",
@@ -85,9 +70,7 @@ class DashStack(Stack):
                 ),
             ),
             desired_count=2,
-            # cpu=4096,
-            # memory_limit_mib=8192,
-            cpu=16384,  # This corresponds to 16 vCPU (maximum)
+            cpu=16384,
             memory_limit_mib=122880,
             public_load_balancer=True,
             certificate=certificate,
@@ -114,7 +97,6 @@ class DashStack(Stack):
             scale_out_cooldown=Duration.seconds(300),
         )
 
-        # Add memory utilization scaling
         scaling.scale_on_memory_utilization(
             "MemoryScaling",
             target_utilization_percent=50,
@@ -193,8 +175,6 @@ class DashStack(Stack):
 
         # Output the DNS name of the load balancer
         CfnOutput(self, "LoadBalancerDNS", value=service.load_balancer.load_balancer_dns_name)
-        # Output the CloudFront distribution URL
-        CfnOutput(self, "CloudFrontURL", value=distribution.distribution_domain_name)
         # Output the CloudWatch Dashboard URL
         CfnOutput(self, "DashboardURL", 
                   value=f"https://{self.region}.console.aws.amazon.com/cloudwatch/home?region={self.region}#dashboards:name=HeatDashStreamlitDashboard")
