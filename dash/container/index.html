@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Heat Risk and Health Index Dashboard</title>
+    <!-- Bootstrap CSS for better UI -->
+    <link
+        href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+        rel="stylesheet"
+    />
+
+    <!-- Font Awesome for Icons -->
+    <link
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
+        rel="stylesheet"
+    />
+
+    <!-- Mapbox GL JS CSS -->
+    <link
+        href="https://api.mapbox.com/mapbox-gl-js/v2.13.0/mapbox-gl.css"
+        rel="stylesheet"
+    />
+
+    <!-- Include Mapbox GL JS -->
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.13.0/mapbox-gl.js"></script>
+
+    <!-- Include Deck.gl -->
+    <script src="https://unpkg.com/deck.gl@8.8.6/dist.min.js"></script>
+
+    <!-- Include Apache Arrow Library for Parquet processing -->
+    <script src="https://cdn.jsdelivr.net/npm/apache-arrow@6.0.1"></script>
+
+    <!-- Include Loaders.gl for WKB parsing -->
+    <script src="https://unpkg.com/@loaders.gl/wkt/dist/dist.min.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js">  </script>
+
+
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            overflow-y:hidden; /* stops issue with popup causing scrollbar to appear */
+            overflow-x:hidden;
+        }
+        /* Dark mode styles */
+        body.dark-mode {
+            background-color: #121212;
+            color: #ffffff;
+        }
+        #deckgl-container {
+            position: absolute;
+            top: 0;
+            left: 350px; /* Adjusted to accommodate sidebar width */
+            right: 0;
+            bottom: 0;
+        }
+        #sidebar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 350px; /* Adjusted width */
+            height: 100%;
+            overflow-y: auto;
+            background-color: #f8f9fa;
+            padding: 15px;
+            box-shadow: 2px 0px 5px rgba(0,0,0,0.1);
+        }
+        /* Dark mode sidebar */
+        body.dark-mode #sidebar {
+            background-color: #1e1e1e;
+            color: #ffffff;
+            box-shadow: 2px 0px 5px rgba(255,255,255,0.1);
+        }
+
+        /* Apply styles to form controls when a parent element (e.g., body) has the dark-mode class */
+        body.dark-mode .form-control {
+            background-color: #1e1e1e;
+            color: #ffffff;
+            border-color: #555555;
+            box-shadow: none;
+        }
+
+        /* Optional: Modify the dropdown arrow color */
+        body.dark-mode .form-control:focus {
+            border-color: #888888;
+            box-shadow: 0 0 5px rgba(255, 255, 255, 0.2);
+        }
+        .dashboard-title {
+            font-weight: bold; /* Make the text bold */
+            background: linear-gradient(to bottom, rgb(255, 102, 0), darkred); /* Gradient from dark orange to dark red */
+            -webkit-background-clip: text; /* Use the gradient as text color */
+            -webkit-text-fill-color: transparent; /* Make the text transparent to show the gradient */
+            background-clip: text; /* For non-WebKit browsers */
+            text-fill-color: transparent; /* For non-WebKit browsers */
+            font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin-left:10px;
+            margin-top:5px;
+        }
+
+        .toggle-btn {
+            border-radius: 20px;
+        }
+
+    </style>
+</head>
+<body>
+    <!-- Sidebar for Controls -->
+    <div id="sidebar">
+
+
+        <div id="sidebar-header" class="mb-3 d-flex justify-content-between align-items-center">
+            <h5 class="dashboard-title">Heat Risk Dashboard</h5>
+            <div class="button-group">
+                <button id="info-button" class="toggle-btn" data-toggle="modal" data-target="#infoModal" aria-label="Information">
+                    <i class="fas fa-info-circle"></i>
+                </button>
+                <button id="dark-mode-toggle" class="toggle-btn ml-2" aria-label="Toggle Dark Mode">
+                    <i class="fas fa-moon"></i>
+                </button>
+            </div>
+        </div>
+        
+        <h6>Location</h6>
+        <div class="form-group">
+            <!-- <label for="state-select">Select State:</label> -->
+            <select id="state-select" class="form-control"></select>
+        </div>
+
+        <div class="form-group">
+            <!-- <label for="county-select">Select County:</label> -->
+            <select id="county-select" class="form-control"></select>
+        </div>
+
+        <div class="form-group">
+            <!-- <label for="zip-code-input">Enter ZIP Code to Zoom In:</label> -->
+            <input type="text" id="zip-code-input" class="form-control" placeholder="e.g., 10044">
+        </div>
+
+        <h6>Heat Risk</h6>
+        <div class="form-group">
+            <!-- <label for="day-select">Select Heat Risk Day:</label> -->
+            <select id="day-select" class="form-control"></select>
+        </div>
+
+        <div class="form-group">
+            <!-- <label for="risk-level-select">Select Heat Risk Levels:</label> -->
+            <select id="risk-level-select" class="form-control" multiple>
+                <option value="0">0</option>
+                <option value="1">1</option>
+                <option value="2" selected>2</option>
+                <option value="3" selected>3</option>
+                <option value="4" selected>4</option>
+            </select>
+        </div>
+
+        <!-- Expander for Heat Risk Levels Description -->
+        <div class="form-group">
+            <button class="btn btn-link" data-toggle="collapse" data-target="#heat-risk-levels-info">
+                Learn more about heat risk levels
+            </button>
+            <div id="heat-risk-levels-info" class="collapse">
+                <!-- Content will be populated dynamically -->
+            </div>
+        </div>
+
+        <h6>Health Index</h6>
+        <div class="form-group">
+            <!-- <label for="hhi-indicator-select">Select CDC Heat and Health Index Indicator:</label> -->
+            <select id="hhi-indicator-select" class="form-control"></select>
+        </div>
+
+        <!-- Expander for HHI Indicator Description -->
+        <div class="form-group">
+            <button class="btn btn-link" data-toggle="collapse" data-target="#hhi-indicator-info">
+                Learn more about this HHI Indicator
+            </button>
+            <div id="hhi-indicator-info" class="collapse">
+                <!-- Content will be populated dynamically -->
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="percentile-threshold">Heat Health Index Percentile Threshold:</label>
+            <input type="range" id="percentile-threshold" class="form-control" min="0" max="100" value="80" step="10">
+            <span id="percentile-value">80</span>%
+        </div>
+
+        <button id="download-button" class="btn btn-primary">Download Filtered Data</button>
+    </div>
+
+    <!-- Map Container -->
+    <div id="deckgl-container"></div>
+
+
+    <!-- Information Modal -->
+    <div class="modal fade" id="infoModal" tabindex="-1" aria-labelledby="infoModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 id="infoModalLabel" class="modal-title">About This Dashboard</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p>This is an experimental prototype provided for informational purposes only by the <a href="https://urbantech.cornell.edu/" target="_blank">Jacobs Urban Tech Hub</a> as part of the <a href="https://agingandadaptation.cornell.edu/" target="_blank">Cornell Initiative on Aging and Adaptation to Extreme Heat</a>.</p>
+                    <p>Please fill out a <a href="https://cornell.ca1.qualtrics.com/jfe/form/SV_4TTfOiGyOZJNVP0" target="_blank">survey</a> to provide feedback. Bug reports <a href="mailto:urbantech@cornell.edu">here</a>.</p>
+                    <hr>
+                    <strong>Data Sources:</strong>
+                    <ul>
+                        <li><a href="https://www.wpc.ncep.noaa.gov/heatrisk/" target="_blank">NWS Heat Risk</a></li>
+                        <li><a href="https://ephtracking.cdc.gov/Applications/heatTracker/" target="_blank">CDC Heat and Health Index</a></li>
+                    </ul>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Include jQuery and Bootstrap JS for collapsible elements -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script
+        src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"
+    ></script>
+
+    <!-- Application Script -->
+    <script type="module" src="app.js"></script>
+</body>
+</html>

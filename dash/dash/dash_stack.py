@@ -1,85 +1,82 @@
 from aws_cdk import (
+    Stack,
     aws_ec2 as ec2,
     aws_ecs as ecs,
     aws_ecs_patterns as ecs_patterns,
     aws_route53 as route53,
     aws_certificatemanager as acm,
+    aws_cloudwatch as cloudwatch,
     aws_s3 as s3,
     aws_logs as logs,
-    aws_cloudwatch as cloudwatch,
-    aws_iam as iam,
-    Stack,
     Duration,
     CfnOutput,
     RemovalPolicy
 )
 from constructs import Construct
 
-class DashStack(Stack):
-    def __init__(self, scope: Construct, id: str, **kwargs) -> None:
-        super().__init__(scope, id, **kwargs)
+class HeatRiskMapAppStack(Stack):
 
-        # Define the domain name
+    def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
+        super().__init__(scope, construct_id, **kwargs)
+
+        # Define the domain name and subdomain
         domain_name = "urbantech.info"
-        subdomain = "heatmap"
+        subdomain = "heatmap-js"
         fqdn = f"{subdomain}.{domain_name}"
 
-        # Create VPC and ECS Cluster with Container Insights enabled
-        vpc = ec2.Vpc(self, "HeatDashStreamlitVPC", max_azs=2)
-        cluster = ecs.Cluster(self, "HeatDashStreamlitCluster", 
+        # VPC
+        vpc = ec2.Vpc(self, "HeatRiskMapAppVpc", max_azs=2)
+
+        # ECS Cluster with Container Insights enabled
+        cluster = ecs.Cluster(self, "HeatRiskMapAppCluster", 
             vpc=vpc,
             container_insights=True
         )
 
-        # Load the Docker image
-        image = ecs.ContainerImage.from_asset('streamlit-docker')
-
         # Look up the hosted zone
-        hosted_zone = route53.HostedZone.from_lookup(self, "HostedZone", domain_name=domain_name)
+        zone = route53.HostedZone.from_lookup(self, "Zone", domain_name=domain_name)
 
-        # Create a certificate
+        # Create a certificate for the subdomain
         certificate = acm.Certificate(self, "Certificate",
             domain_name=fqdn,
-            validation=acm.CertificateValidation.from_dns(hosted_zone)
+            validation=acm.CertificateValidation.from_dns(zone)
         )
 
-        # Reference existing S3 bucket for heat risk data
+        # Reference existing S3 bucket
         bucket_name = "heat-risk-dashboard"
-        heat_risk_bucket = s3.Bucket.from_bucket_name(self, "HeatRiskBucket", bucket_name)
+        existing_bucket = s3.Bucket.from_bucket_name(self, "ExistingBucket", bucket_name)
 
         # Create a log group for the Fargate service
-        log_group = logs.LogGroup(self, "HeatDashLogGroup",
-            log_group_name="/ecs/heat-dash-streamlit",
+        log_group = logs.LogGroup(self, "HeatRiskMapAppLogGroup",
+            log_group_name="/ecs/heatriskmap",
             removal_policy=RemovalPolicy.DESTROY,
             retention=logs.RetentionDays.ONE_WEEK
         )
 
-        # Create the Fargate service with ALB
-        service = ecs_patterns.ApplicationLoadBalancedFargateService(
-            self, "HeatDashFargateService",
+        # Fargate Service
+        fargate_service = ecs_patterns.ApplicationLoadBalancedFargateService(self, "HeatRiskMapAppService",
             cluster=cluster,
+            cpu=256,
+            memory_limit_mib=512,
+            desired_count=2,
             task_image_options=ecs_patterns.ApplicationLoadBalancedTaskImageOptions(
-                image=image,
-                container_port=8501,
+                image=ecs.ContainerImage.from_asset("./container/"),
+                container_port=80,
                 environment={
                     "S3_BUCKET_NAME": bucket_name
                 },
                 log_driver=ecs.LogDrivers.aws_logs(
-                    stream_prefix="HeatDashStreamlit",
+                    stream_prefix="HeatRiskMapApp",
                     log_group=log_group
                 ),
             ),
-            desired_count=2,
-            cpu=16384,
-            memory_limit_mib=122880,
-            public_load_balancer=True,
             certificate=certificate,
             domain_name=fqdn,
-            domain_zone=hosted_zone,
+            domain_zone=zone,
         )
 
-        # Configure the health check for the target group
-        service.target_group.configure_health_check(
+        # Configure health check for the target group
+        fargate_service.target_group.configure_health_check(
             path="/",
             healthy_http_codes="200",
             interval=Duration.seconds(30),
@@ -89,50 +86,32 @@ class DashStack(Stack):
         )
 
         # Set up auto-scaling
-        scaling = service.service.auto_scale_task_count(max_capacity=24)
+        scaling = fargate_service.service.auto_scale_task_count(max_capacity=4)
         scaling.scale_on_cpu_utilization(
             "CpuScaling",
-            target_utilization_percent=50,
-            scale_in_cooldown=Duration.seconds(300),
-            scale_out_cooldown=Duration.seconds(300),
+            target_utilization_percent=70,
+            scale_in_cooldown=Duration.seconds(60),
+            scale_out_cooldown=Duration.seconds(60),
         )
 
-        scaling.scale_on_memory_utilization(
-            "MemoryScaling",
-            target_utilization_percent=50,
-            scale_in_cooldown=Duration.seconds(300),
-            scale_out_cooldown=Duration.seconds(300),
+        # CloudWatch Dashboard
+        dashboard = cloudwatch.Dashboard(self, "HeatRiskMapAppDashboard",
+            dashboard_name="HeatRiskMapAppMetrics"
         )
 
-        # Create a CloudWatch dashboard
-        dashboard = cloudwatch.Dashboard(self, "HeatDashDashboard",
-            dashboard_name="HeatDashStreamlitDashboard"
-        )
-
-        # Create a metric for cluster-level RunningTaskCount using Container Insights
-        cluster_running_task_count_metric = cloudwatch.Metric(
-            namespace="ECS/ContainerInsights",
-            metric_name="TaskCount",
-            dimensions_map={
-                "ClusterName": cluster.cluster_name
-            },
-            statistic="Average",
-            period=Duration.minutes(1)
-        )
-
-        # Add widgets to the dashboard
+        # Add metrics to the dashboard
         dashboard.add_widgets(
             cloudwatch.GraphWidget(
+                title="Request Count",
+                left=[fargate_service.load_balancer.metrics.request_count()]
+            ),
+            cloudwatch.GraphWidget(
                 title="CPU Utilization",
-                left=[service.service.metric_cpu_utilization()]
+                left=[fargate_service.service.metric_cpu_utilization()]
             ),
             cloudwatch.GraphWidget(
                 title="Memory Utilization",
-                left=[service.service.metric_memory_utilization()]
-            ),
-            cloudwatch.GraphWidget(
-                title="Cluster Running Task Count",
-                left=[cluster_running_task_count_metric]
+                left=[fargate_service.service.metric_memory_utilization()]
             ),
             cloudwatch.LogQueryWidget(
                 title="Application Logs",
@@ -146,16 +125,16 @@ class DashStack(Stack):
             )
         )
 
-        # Create CloudWatch alarms for CPU and Memory utilization
+        # Create CloudWatch alarms
         cpu_alarm = cloudwatch.Alarm(self, "CPUUtilizationAlarm",
-            metric=service.service.metric_cpu_utilization(),
+            metric=fargate_service.service.metric_cpu_utilization(),
             threshold=70,
             evaluation_periods=3,
             datapoints_to_alarm=2,
         )
 
         memory_alarm = cloudwatch.Alarm(self, "MemoryUtilizationAlarm",
-            metric=service.service.metric_memory_utilization(),
+            metric=fargate_service.service.metric_memory_utilization(),
             threshold=70,
             evaluation_periods=3,
             datapoints_to_alarm=2,
@@ -173,8 +152,7 @@ class DashStack(Stack):
             )
         )
 
-        # Output the DNS name of the load balancer
-        CfnOutput(self, "LoadBalancerDNS", value=service.load_balancer.load_balancer_dns_name)
-        # Output the CloudWatch Dashboard URL
+        # Outputs
+        CfnOutput(self, "LoadBalancerDNS", value=fargate_service.load_balancer.load_balancer_dns_name)
         CfnOutput(self, "DashboardURL", 
-                  value=f"https://{self.region}.console.aws.amazon.com/cloudwatch/home?region={self.region}#dashboards:name=HeatDashStreamlitDashboard")
+                  value=f"https://{self.region}.console.aws.amazon.com/cloudwatch/home?region={self.region}#dashboards:name=HeatRiskMapAppMetrics")

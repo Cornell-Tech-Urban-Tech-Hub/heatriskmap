@@ -13,18 +13,18 @@ This application is an experimental dashboard that two new indices published by 
 It consists of two parts:
 
 - A Python **scraper** script that is deployed to AWS with Terraform, and runs an AWS Batch job nightly to fetch and preprocess data from the NWS and CDC.
-- A Python web **dash** streamlit app that is deployed with to AWS Fargate with AWS CDK.
+- A Javascript web **dash** app that is deployed with nginx to AWS Fargate with AWS CDK.
 
 
 ## `dash`
 
-A Streamlit app packaged for deployment on AWS Elastic Container Service / Fargate. Allows users to make selections of day and indicator, and threshholds for filters for both.
+A Javascript app packaged for deployment on AWS Elastic Container Service / Fargate. Allows users to make selections of day and indicator, and threshholds for filters for both.
 
 ### Development
 
 Run locally:
 
-        cd dash/streamlit-docker && docker compose up --build streamlit
+        cd dash/container && docker compose up --build heatmap
 
 ### Deployment
 
