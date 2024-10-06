@@ -42,19 +42,48 @@ function populateInformationalBoxes() {
         </ul>
     `;
 }
-
 function zoomToRegion(geometry) {
+    let coordinates = [];
+
+    // Determine the geometry type and extract coordinates
+    if (geometry.type === 'Polygon') {
+        // Collect coordinates from all rings of the polygon
+        coordinates = geometry.coordinates.flat();
+    } else if (geometry.type === 'MultiPolygon') {
+        // Collect coordinates from all polygons and all rings
+        geometry.coordinates.forEach(polygon => {
+            coordinates.push(...polygon.flat());
+        });
+    } else {
+        console.error('Unsupported geometry type:', geometry.type);
+        return;
+    }
+
+    // Additional check for coordinates validity
+    if (!coordinates || !Array.isArray(coordinates) || coordinates.length === 0) {
+        console.error('Invalid geometry coordinates:', coordinates);
+        return;
+    }
+
     // Calculate bounding box from the coordinates
-    const coordinates = geometry.coordinates[0];
     let minLng = Infinity, minLat = Infinity, maxLng = -Infinity, maxLat = -Infinity;
 
-    coordinates.forEach(coord => {
-        const [lng, lat] = coord;
-        if (lng < minLng) minLng = lng;
-        if (lat < minLat) minLat = lat;
-        if (lng > maxLng) maxLng = lng;
-        if (lat > maxLat) maxLat = lat;
-    });
+    try {
+        coordinates.forEach(coord => {
+            if (!Array.isArray(coord) || coord.length < 2) {
+                console.error('Invalid coordinate:', coord);
+                return;
+            }
+            const [lng, lat] = coord;
+            if (lng < minLng) minLng = lng;
+            if (lat < minLat) minLat = lat;
+            if (lng > maxLng) maxLng = lng;
+            if (lat > maxLat) maxLat = lat;
+        });
+    } catch (error) {
+        console.error('Error while processing coordinates:', error);
+        return;
+    }
 
     // Calculate the center of the bounding box
     const centerLng = (minLng + maxLng) / 2;
@@ -66,7 +95,6 @@ function zoomToRegion(geometry) {
     const maxDiff = Math.max(lngDiff, latDiff);
 
     // Determine a zoom level based on the size of the bounding box
-    // The zoom level formula may need tweaking 
     let zoomLevel = 10; // Default zoom level
     if (maxDiff > 0) {
         zoomLevel = Math.log2(860 / maxDiff) - 1; // Adjusting to fit the bounds in view
@@ -350,22 +378,23 @@ async function fetchGeoParquet(url) {
     console.log("Arrow Table:", arrowTable);
     console.log("Number of Rows:", arrowTable.numRows);
     console.log("Schema:", arrowTable.schema);
+    console.log("First few rows of Arrow Table:");
+    for (let i = 0; i < Math.min(5, arrowTable.numRows); i++) {
+        console.log(`Row ${i}:`, arrowTable.get(i));
+    }
 
     // Proceed with processing the arrowTable
     const geojson = convertArrowToGeoJSON(arrowTable);
+    console.log("Generated GeoJSON:", geojson);
+    console.log("Number of features in GeoJSON:", geojson.features.length);
     return geojson;
 }
 
-
-
-
-// Import WKBLoader for WKB parsing
-import { WKBLoader } from 'https://cdn.skypack.dev/@loaders.gl/wkt';
-// Function to convert Arrow table to GeoJSON
 function convertArrowToGeoJSON(arrowTable) {
     const features = [];
     const numRows = arrowTable.numRows;
     const geometryColumnName = arrowTable.schema.fields.find(field => field.name === 'geometry').name;
+    // console.log("Geometry column name:", geometryColumnName);
 
     for (let i = 0; i < numRows; i++) {
         const properties = {};
@@ -375,9 +404,20 @@ function convertArrowToGeoJSON(arrowTable) {
                 properties[field.name] = column ? column.get(i) : null;
             }
         }
+
         const geometryColumn = arrowTable.getChild(geometryColumnName);
         const geometryData = geometryColumn ? geometryColumn.get(i) : null;
-        const geometry = extractGeometryFromArrow(geometryData);
+
+        // Log geometry data for each row to inspect its content
+        // console.log(`Row ${i} geometry data:`, geometryData);
+
+        // Attempt to parse the geometry, even if it might seem invalid
+        let geometry = null;
+        try {
+            geometry = extractGeometryFromArrow(geometryData);
+        } catch (error) {
+            console.warn(`Error parsing geometry for row ${i}:`, error);
+        }
 
         if (geometry) {
             features.push({
@@ -385,9 +425,12 @@ function convertArrowToGeoJSON(arrowTable) {
                 properties: properties,
                 geometry: geometry,
             });
+        } else {
+            console.warn(`Row ${i} has invalid or missing geometry data, but an attempt was made to parse it.`);
         }
     }
 
+    // console.log("Finished converting Arrow table to GeoJSON.");
     return {
         type: 'FeatureCollection',
         features: features,
@@ -396,7 +439,11 @@ function convertArrowToGeoJSON(arrowTable) {
 
 // Function to extract geometry from Arrow table
 function extractGeometryFromArrow(geometryData) {
-    if (!geometryData) return null;
+    if (!geometryData) {
+        console.warn('Geometry data is null or undefined.');
+        return null;
+    }
+
     try {
         if (geometryData instanceof Uint8Array) {
             const dataView = new DataView(geometryData.buffer, geometryData.byteOffset, geometryData.byteLength);
@@ -404,33 +451,107 @@ function extractGeometryFromArrow(geometryData) {
             const littleEndian = byteOrder === 1;
             const wkbType = dataView.getUint32(1, littleEndian);
 
-            if (wkbType === 3) {
-                const numRings = dataView.getUint32(5, littleEndian);
-                let offset = 9;
-                const coordinates = [];
+            // console.log('WKB Type:', wkbType);
 
-                for (let i = 0; i < numRings; i++) {
-                    const numPoints = dataView.getUint32(offset, littleEndian);
-                    offset += 4;
-
-                    const ringCoordinates = [];
-                    for (let j = 0; j < numPoints; j++) {
-                        const x = dataView.getFloat64(offset, littleEndian);
-                        const y = dataView.getFloat64(offset + 8, littleEndian);
-                        ringCoordinates.push([x, y]);
-                        offset += 16;
-                    }
-                    coordinates.push(ringCoordinates);
-                }
-
-                return { type: 'Polygon', coordinates: coordinates };
+            // Attempt to handle different geometry types
+            switch (wkbType) {
+                case 3: // Polygon
+                    return parsePolygon(dataView, littleEndian);
+                case 6: // MultiPolygon
+                    return parseMultiPolygon(dataView, littleEndian);
+                default:
+                    console.warn('Unsupported WKB type:', wkbType);
+                    return null;
             }
+        } else {
+            console.warn('Geometry data is not of type Uint8Array.');
+            return null;
         }
     } catch (error) {
-        console.error('Error parsing WKB:', error);
+        console.error('Error parsing geometry data:', error);
+        return null;
     }
-    return null;
 }
+function parsePolygon(dataView, littleEndian) {
+    try {
+        // Read number of rings
+        const numRings = dataView.getUint32(5, littleEndian);
+        let offset = 9;
+        const coordinates = [];
+
+        for (let i = 0; i < numRings; i++) {
+            const numPoints = dataView.getUint32(offset, littleEndian);
+            offset += 4;
+            const ringCoordinates = [];
+
+            for (let j = 0; j < numPoints; j++) {
+                const x = dataView.getFloat64(offset, littleEndian);
+                const y = dataView.getFloat64(offset + 8, littleEndian);
+                ringCoordinates.push([x, y]);
+                offset += 16;
+            }
+            coordinates.push(ringCoordinates);
+        }
+        return { type: 'Polygon', coordinates: coordinates };
+    } catch (error) {
+        console.error('Error parsing polygon data:', error);
+        return null;
+    }
+}
+
+function parseMultiPolygon(dataView, littleEndian) {
+    try {
+        const numPolygons = dataView.getUint32(5, littleEndian);
+        let offset = 9;
+        const coordinates = [];
+
+        for (let i = 0; i < numPolygons; i++) {
+            // Read byte order for this polygon
+            const byteOrder = dataView.getUint8(offset);
+            offset += 1;
+            const polygonLittleEndian = byteOrder === 1;
+
+            // Read geometry type
+            let polygonType = dataView.getUint32(offset, polygonLittleEndian);
+            offset += 4;
+
+            // Mask out high bits (e.g., SRID, Z, M flags)
+            const basePolygonType = polygonType & 0xFF;
+
+            if (basePolygonType !== 3) { // Ensure the nested type is a Polygon
+                console.warn('Unexpected geometry type within MultiPolygon:', basePolygonType);
+                // Skip to the next polygon if the type is not a Polygon
+                continue;
+            }
+
+            // Read number of rings
+            const numRings = dataView.getUint32(offset, polygonLittleEndian);
+            offset += 4;
+            const polygonCoordinates = [];
+
+            for (let j = 0; j < numRings; j++) {
+                const numPoints = dataView.getUint32(offset, polygonLittleEndian);
+                offset += 4;
+                const ringCoordinates = [];
+
+                for (let k = 0; k < numPoints; k++) {
+                    const x = dataView.getFloat64(offset, polygonLittleEndian);
+                    const y = dataView.getFloat64(offset + 8, polygonLittleEndian);
+                    ringCoordinates.push([x, y]);
+                    offset += 16;
+                }
+                polygonCoordinates.push(ringCoordinates);
+            }
+            coordinates.push(polygonCoordinates);
+        }
+        return { type: 'MultiPolygon', coordinates: coordinates };
+    } catch (error) {
+        console.error('Error parsing multipolygon data:', error);
+        return null;
+    }
+}
+
+
 
 
 
@@ -545,7 +666,107 @@ function updateMapLayer() {
             return null;
         }
     });
+
+
+    // After updating the map layer, generate charts
+    generatePopulationChart(filteredData);
+    generateAge65Chart(filteredData);
+
 }
+
+// Function to generate population affected by heat risk level
+function generatePopulationChart(data) {
+    const populationByRisk = {};
+
+    data.features.forEach(feature => {
+        const riskLevel = feature.properties.raster_value;
+        const population = feature.properties.weighted_POP || 0;
+        if (populationByRisk[riskLevel]) {
+            populationByRisk[riskLevel] += population;
+        } else {
+            populationByRisk[riskLevel] = population;
+        }
+    });
+
+    const riskLevels = Object.keys(populationByRisk).sort();
+    const populations = riskLevels.map(level => populationByRisk[level]);
+
+    const trace = {
+        x: populations,
+        y: riskLevels,
+        type: 'bar',
+        orientation: 'h',
+        marker: {
+            color: riskLevels.map(level => {
+                switch (parseInt(level, 10)) {
+                    case 0: return 'rgb(255, 255, 204)';
+                    case 1: return 'rgb(255, 237, 160)';
+                    case 2: return 'rgb(254, 178, 76)';
+                    case 3: return 'rgb(253, 141, 60)';
+                    case 4: return 'rgb(240, 59, 32)';
+                    default: return 'rgb(189, 0, 38)';
+                }
+            })
+        }
+    };
+
+    const layout = {
+        title: 'Population Affected by Heat Risk Level',
+        xaxis: { title: 'Affected Population' },
+        yaxis: { title: 'Heat Risk Level' },
+        margin: { l: 100, r: 50, t: 50, b: 50 }
+    };
+
+    Plotly.newPlot('population-chart', [trace], layout);
+}
+
+// Function to generate age 65+ percentage chart
+function generateAge65Chart(data) {
+    const age65ByRisk = {};
+
+    data.features.forEach(feature => {
+        const riskLevel = feature.properties.raster_value;
+        const age65 = feature.properties.weighted_P_AGE65 || 0;
+        if (age65ByRisk[riskLevel]) {
+            age65ByRisk[riskLevel].sum += age65;
+            age65ByRisk[riskLevel].count += 1;
+        } else {
+            age65ByRisk[riskLevel] = { sum: age65, count: 1 };
+        }
+    });
+
+    const riskLevels = Object.keys(age65ByRisk).sort();
+    const age65Averages = riskLevels.map(level => (age65ByRisk[level].sum / age65ByRisk[level].count).toFixed(2));
+
+    const trace = {
+        x: age65Averages,
+        y: riskLevels,
+        type: 'bar',
+        orientation: 'h',
+        marker: {
+            color: riskLevels.map(level => {
+                switch (parseInt(level, 10)) {
+                    case 0: return 'rgb(255, 255, 204)';
+                    case 1: return 'rgb(255, 237, 160)';
+                    case 2: return 'rgb(254, 178, 76)';
+                    case 3: return 'rgb(253, 141, 60)';
+                    case 4: return 'rgb(240, 59, 32)';
+                    default: return 'rgb(189, 0, 38)';
+                }
+            })
+        }
+    };
+
+    const layout = {
+        title: 'Percentage of Persons Aged 65 and Older by Heat Risk Level',
+        xaxis: { title: 'Percentage of Persons Aged 65 and Older (%)' },
+        yaxis: { title: 'Heat Risk Level' },
+        margin: { l: 150, r: 50, t: 50, b: 50 }
+    };
+
+    Plotly.newPlot('age65-chart', [trace], layout);
+}
+
 
 
 // Function to calculate percentile threshold
@@ -594,14 +815,26 @@ async function loadHHIDescription() {
 // Function to populate state options
 function populateStateOptions(statesData) {
     stateSelect.innerHTML = '<option value="">Select a State</option>';
+    
+    // Log the full statesData to see its structure
+    console.log("States Data:", statesData);
+
     const sortedStates = statesData.features.sort((a, b) => a.properties.NAME.localeCompare(b.properties.NAME));
+    
     sortedStates.forEach(feature => {
+        const stateName = feature.properties.NAME;
+        console.log("Processing State:", stateName); // Log each state name being processed
+
         const option = document.createElement('option');
-        option.value = feature.properties.NAME;
-        option.text = feature.properties.NAME;
+        option.value = stateName;
+        option.text = stateName;
         stateSelect.add(option);
     });
+
+    // Log the final state of the dropdown
+    console.log("State dropdown options:", stateSelect.options);
 }
+
 
 // Function to populate county options
 function populateCountyOptions(countiesData, selectedState = "") {
@@ -694,3 +927,112 @@ document.addEventListener('DOMContentLoaded', () => {
         icon.classList.add('fa-sun');
     }
 });
+
+// Elements
+const startDateSelect = document.getElementById('start-date-select');
+
+// Event listener for the start date selection
+startDateSelect.addEventListener('change', () => {
+    const selectedDate = new Date(startDateSelect.value);
+    
+    if (isNaN(selectedDate)) {
+        alert('Please select a valid start date.');
+        return;
+    }
+
+    // Generate date options for 7 consecutive days starting from the selected date
+    const dateOptions = [];
+    for (let i = 0; i < 7; i++) {
+        const date = new Date(selectedDate);
+        date.setDate(selectedDate.getDate() + i);
+        const formattedDate = date.toLocaleDateString('en-US');
+        dateOptions.push(`Day ${i + 1} - ${formattedDate}`);
+    }
+
+    // Clear the existing options in the day select dropdown
+    daySelect.innerHTML = '';
+
+    // Populate the day select dropdown with the new date options
+    dateOptions.forEach(optionText => {
+        const option = document.createElement('option');
+        option.value = optionText.split(' - ')[0]; // Extract 'Day 1', 'Day 2', etc. as the value
+        option.text = optionText;
+        daySelect.add(option);
+    });
+});
+
+// Function to list S3 objects and filter by available dates
+async function listAvailableDates(bucketUrl) {
+    const objects = [];
+    let continuationToken = null;
+    const availableDates = new Set();
+
+    do {
+        console.log('hitting url')
+        const url = new URL(bucketUrl);
+        url.searchParams.append('list-type', '2');
+        if (continuationToken) {
+            url.searchParams.append('continuation-token', continuationToken);
+        }
+
+        const response = await fetch(url);
+        const text = await response.text();
+        console.log(response);
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(text, "text/xml");
+
+        // Parse objects
+        const contents = xmlDoc.getElementsByTagName('Contents');
+        for (const content of contents) {
+            const key = content.getElementsByTagName('Key')[0].textContent;
+            objects.push(key);
+
+            // Extract date from the key (assuming a specific pattern in the filename)
+            const dateMatch = key.match(/\d{4}-\d{2}-\d{2}/); // Assuming format YYYY-MM-DD
+            if (dateMatch) {
+                availableDates.add(dateMatch[0]); // Add to the set to ensure uniqueness
+            }
+        }
+
+        // Check if there are more objects to fetch
+        const isTruncated = xmlDoc.getElementsByTagName('IsTruncated')[0].textContent;
+        if (isTruncated.toLowerCase() === 'true') {
+            continuationToken = xmlDoc.getElementsByTagName('NextContinuationToken')[0].textContent;
+        } else {
+            continuationToken = null;
+        }
+    } while (continuationToken);
+
+    return Array.from(availableDates); // Convert the set to an array
+}
+
+// Function to populate the date picker
+async function populateDatePicker(bucketUrl) {
+    try {
+        const availableDates = await listAvailableDates(bucketUrl);
+        const startDateSelect = document.getElementById('start-date-select');
+
+        // Set min and max attributes based on the available dates
+        if (availableDates.length > 0) {
+            const minDate = new Date(Math.min(...availableDates.map(date => new Date(date))));
+            const maxDate = new Date(Math.max(...availableDates.map(date => new Date(date))));
+            startDateSelect.min = minDate.toISOString().split('T')[0];
+            startDateSelect.max = maxDate.toISOString().split('T')[0];
+        }
+
+        // Disable unavailable dates
+        startDateSelect.addEventListener('input', () => {
+            const selectedDate = startDateSelect.value;
+            if (!availableDates.includes(selectedDate)) {
+                alert('Selected date is not available. Please choose another date.');
+                startDateSelect.value = ''; // Clear the invalid selection
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching available dates:', error);
+    }
+}
+
+// Usage example
+const bucketUrl = 'https://heat-risk-dashboard.s3.amazonaws.com/';
+populateDatePicker(bucketUrl);

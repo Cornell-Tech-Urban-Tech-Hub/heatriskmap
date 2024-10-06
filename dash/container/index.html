@@ -35,6 +35,12 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js">  </script>
 
+    <script src="https://unpkg.com/terraformer@1.0.7/terraformer.js"></script>
+    <script src="https://unpkg.com/terraformer-wkt-parser@1.1.2/terraformer-wkt-parser.js"></script>
+
+    <!-- Include Plotly.js -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
 
     <style>
         body, html {
@@ -94,14 +100,49 @@
             background-clip: text; /* For non-WebKit browsers */
             text-fill-color: transparent; /* For non-WebKit browsers */
             font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin-left:10px;
+            /*margin-left:10px;*/
             margin-top:5px;
+            font-size: large;
         }
 
         .toggle-btn {
             border-radius: 20px;
+            border-color: lightgrey !important;
+            border: 0.00001rem solid;
         }
 
+        .modal-dialog {
+            max-width: 800px;
+            margin: 1.75rem auto;
+        }
+
+        .ml-2 {
+            margin-left: 0rem !important;
+        }
+
+        /* Customize the entire scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px; /* Width of the scrollbar */
+        }
+
+        /* Customize the track (background of the scrollbar) */
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1; /* Light background color */
+            border-radius: 10px; /* Rounded corners */
+        }
+
+        /* Customize the scrollbar thumb (draggable part) */
+        ::-webkit-scrollbar-thumb {
+            background: #888; /* Color of the scrollbar thumb */
+            border-radius: 10px; /* Rounded corners for a sleek look */
+        }
+
+        /* Change the color when the scrollbar is hovered */
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555; /* Darker shade on hover */
+        }
+
+    
     </style>
 </head>
 <body>
@@ -112,6 +153,9 @@
         <div id="sidebar-header" class="mb-3 d-flex justify-content-between align-items-center">
             <h5 class="dashboard-title">Heat Risk Dashboard</h5>
             <div class="button-group">
+                <button id="graph-button" class="toggle-btn" data-toggle="modal" data-target="#graphModal" aria-label="Information">
+                    <i class="fas fa-chart-bar"></i>
+                </button>
                 <button id="info-button" class="toggle-btn" data-toggle="modal" data-target="#infoModal" aria-label="Information">
                     <i class="fas fa-info-circle"></i>
                 </button>
@@ -138,6 +182,10 @@
         </div>
 
         <h6>Heat Risk</h6>
+        <div class="form-group">
+            <!-- <label for="start-date-select">Select Start Date:</label> -->
+            <input type="date" id="start-date-select" class="form-control">
+        </div>
         <div class="form-group">
             <!-- <label for="day-select">Select Heat Risk Day:</label> -->
             <select id="day-select" class="form-control"></select>
@@ -187,10 +235,38 @@
         </div>
 
         <button id="download-button" class="btn btn-primary">Download Filtered Data</button>
+
     </div>
 
     <!-- Map Container -->
     <div id="deckgl-container"></div>
+
+
+    <!-- Graph Modal -->
+    <div class="modal fade" id="graphModal" tabindex="-1" aria-labelledby="infoModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 id="infoModalLabel" class="modal-title">Detailed Charts</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+
+                <!-- Summary Charts Section -->
+                <div id="charts-section" class="mt-4">
+                    <div id="population-chart" class="mb-4"></div>
+                    <div id="age65-chart"></div>
+                </div>
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
 
     <!-- Information Modal -->
