@@ -21,7 +21,7 @@ class HeatRiskMapAppStack(Stack):
 
         # Define the domain name and subdomain
         domain_name = "urbantech.info"
-        subdomain = "heatmap-js"
+        subdomain = "heatmap"
         fqdn = f"{subdomain}.{domain_name}"
 
         # VPC
