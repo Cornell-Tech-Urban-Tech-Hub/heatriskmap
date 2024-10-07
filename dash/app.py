@@ -13,7 +13,7 @@ env=cdk.Environment(
 
 HeatRiskMapAppStack(
     app, 
-    "HeatDashStreamlit-Production",
+    "HeatDashJS-Production",
     description="Heat Dashboard using Javascript running on nginx and ECS Fargate",
     env=env
     )

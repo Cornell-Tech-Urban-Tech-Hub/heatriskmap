@@ -2,8 +2,7 @@
 
 # To-Do list
 
-1. performance = rebuild the dash app --> fullscreen map + more performant
-2. simplicity/integrity = merge the two deployments into a single stack --> move the scraper into the CDK stack
+1. merge the two deployments into a single stack --> move the scraper into the CDK stack
 
 
 ## description

@@ -1,3 +1,12 @@
+// ui
+
+
+
+
+
+
+
+
 // app.js
 
 import * as arrow from 'https://cdn.skypack.dev/apache-arrow';
@@ -598,17 +607,7 @@ function updateMapLayer() {
         filled: true,
         stroked: false, // Disable the outline
         opacity: 0.6,
-        getFillColor: f => {
-            const riskLevel = f.properties.raster_value;
-            switch (riskLevel) {
-                case 0: return [255, 255, 204];
-                case 1: return [255, 237, 160];
-                case 2: return [254, 178, 76];
-                case 3: return [253, 141, 60];
-                case 4: return [240, 59, 32];
-                default: return [189, 0, 38];
-            }
-        },
+        getFillColor: getFillColor, // Use the function to get fill color based on the selected scheme
         getLineColor: [0, 0, 0],
         getLineWidth: 0.5,
         lineWidthUnits: 'pixels',
@@ -890,6 +889,7 @@ const infoModal = $('#infoModal'); // Using jQuery for Bootstrap modal
 // Dark mode toggle event listener
 darkModeToggle.addEventListener('click', () => {
     isDarkMode = !isDarkMode;
+    localStorage.setItem('darkMode', isDarkMode ? "enabled" : "disabled")
     document.body.classList.toggle('dark-mode', isDarkMode);
     updateMapStyle();
 
@@ -914,27 +914,28 @@ function updateMapStyle() {
 // ... [Previous app.js code]
 
 // On page load, check localStorage for dark mode preference
-document.addEventListener('DOMContentLoaded', () => {
-    const darkModePreference = localStorage.getItem('darkMode');
-    if (darkModePreference === 'enabled') {
-        isDarkMode = true;
-        document.body.classList.add('dark-mode');
-        updateMapStyle();
+const darkModePreference = localStorage.getItem('darkMode');
+console.log("dark", darkModePreference)
+if (darkModePreference === "enabled") {
+    isDarkMode = true;
+    document.body.classList.add('dark-mode');
+    updateMapStyle();
 
-        // Update toggle icon
-        const icon = darkModeToggle.querySelector('i');
-        icon.classList.remove('fa-moon');
-        icon.classList.add('fa-sun');
-    }
-});
+    // Update toggle icon
+    const icon = darkModeToggle.querySelector('i');
+    icon.classList.remove('fa-moon');
+    icon.classList.add('fa-sun');
+}
 
 // Elements
 const startDateSelect = document.getElementById('start-date-select');
 
 // Event listener for the start date selection
 startDateSelect.addEventListener('change', () => {
-    const selectedDate = new Date(startDateSelect.value);
-    
+    // Parse the selected date manually to ensure it's treated as local time
+    const [year, month, day] = startDateSelect.value.split('-').map(Number);
+    const selectedDate = new Date(year, month - 1, day); // Months are 0-based in JavaScript
+
     if (isNaN(selectedDate)) {
         alert('Please select a valid start date.');
         return;
@@ -943,9 +944,12 @@ startDateSelect.addEventListener('change', () => {
     // Generate date options for 7 consecutive days starting from the selected date
     const dateOptions = [];
     for (let i = 0; i < 7; i++) {
-        const date = new Date(selectedDate);
-        date.setDate(selectedDate.getDate() + i);
-        const formattedDate = date.toLocaleDateString('en-US');
+        const date = new Date(selectedDate); // Clone the selectedDate
+        date.setDate(selectedDate.getDate() + i); // Add i days
+
+        // Format the date as YYYY-MM-DD for consistency
+        const formattedDate = date.toISOString().split('T')[0]; // 'YYYY-MM-DD'
+
         dateOptions.push(`Day ${i + 1} - ${formattedDate}`);
     }
 
@@ -961,6 +965,8 @@ startDateSelect.addEventListener('change', () => {
     });
 });
 
+
+
 // Function to list S3 objects and filter by available dates
 async function listAvailableDates(bucketUrl) {
     const objects = [];
@@ -968,7 +974,7 @@ async function listAvailableDates(bucketUrl) {
     const availableDates = new Set();
 
     do {
-        console.log('hitting url')
+        console.log('hitting url');
         const url = new URL(bucketUrl);
         url.searchParams.append('list-type', '2');
         if (continuationToken) {
@@ -987,10 +993,12 @@ async function listAvailableDates(bucketUrl) {
             const key = content.getElementsByTagName('Key')[0].textContent;
             objects.push(key);
 
-            // Extract date from the key (assuming a specific pattern in the filename)
-            const dateMatch = key.match(/\d{4}-\d{2}-\d{2}/); // Assuming format YYYY-MM-DD
+            // Extract date from the key (updated regex to match YYYYMMDD format)
+            const dateMatch = key.match(/\d{8}/); // Match format YYYYMMDD
             if (dateMatch) {
-                availableDates.add(dateMatch[0]); // Add to the set to ensure uniqueness
+                // Convert YYYYMMDD to YYYY-MM-DD for consistency
+                const formattedDate = dateMatch[0].replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3');
+                availableDates.add(formattedDate);
             }
         }
 
@@ -1009,7 +1017,9 @@ async function listAvailableDates(bucketUrl) {
 // Function to populate the date picker
 async function populateDatePicker(bucketUrl) {
     try {
+        console.log("test");
         const availableDates = await listAvailableDates(bucketUrl);
+        console.log(availableDates);
         const startDateSelect = document.getElementById('start-date-select');
 
         // Set min and max attributes based on the available dates
@@ -1036,3 +1046,66 @@ async function populateDatePicker(bucketUrl) {
 // Usage example
 const bucketUrl = 'https://heat-risk-dashboard.s3.amazonaws.com/';
 populateDatePicker(bucketUrl);
+
+
+// Define color schemes
+const colorSchemes = {
+    default: [
+        [247, 192, 186], // #f7c0ba
+        [242, 142, 128], // #f28e80
+        [231, 88, 80],   // #e75850
+        [192, 57, 43],   // #c0392b
+        [142, 44, 43],   // #8e2c2b
+        [112, 57, 71]    // #703947
+    ],
+    colorblind: [
+        [213, 94, 0],    // Orange
+        [204, 121, 167], // Pink
+        [0, 114, 178],   // Blue
+        [240, 228, 66],  // Yellow
+        [0, 158, 115],   // Green
+        [0, 0, 0]        // Black for default
+    ],
+    differentiated: [
+        [255, 0, 0],     // Red
+        [0, 0, 255],     // Blue
+        [0, 255, 0],     // Green
+        [255, 255, 0],   // Yellow
+        [255, 165, 0],   // Orange
+        [128, 128, 128]  // Gray for default
+    ],
+    complementary: [
+        [255, 255, 204], // Light Yellow
+        [255, 217, 102], // Light Orange
+        [255, 153, 51],  // Orange
+        [255, 102, 0],   // Dark Orange
+        [204, 51, 0],    // Red
+        [153, 0, 0]      // Dark Red for default
+    ]
+};
+
+// Get the selected color scheme from localStorage or set to 'default'
+const selectedScheme = localStorage.getItem('colorScheme') || 'default';
+
+// Function to get the fill color based on the selected scheme
+function getFillColor(f) {
+    const riskLevel = f.properties.raster_value;
+    const selectedScheme = localStorage.getItem('colorScheme') || 'default';
+    const colors = colorSchemes[selectedScheme] || colorSchemes.default;
+    return colors[riskLevel] || colors[colors.length - 1]; // Default to last color if out of range
+}
+
+// Save color scheme selection to localStorage and refresh the map
+document.getElementById('colorSchemeSelect').addEventListener('change', (event) => {
+    const selectedOption = event.target.value;
+    localStorage.setItem('colorScheme', selectedOption);
+    updateMapLayer(); // Refresh the map with the new color scheme
+});
+
+
+// Set the dropdown to the stored color scheme on page load
+const colorSchemeSelect = document.getElementById('colorSchemeSelect');
+const storedScheme = localStorage.getItem('colorScheme') || 'default';
+console.log(storedScheme)
+// Ensure the dropdown reflects the stored color scheme
+colorSchemeSelect.value = storedScheme;

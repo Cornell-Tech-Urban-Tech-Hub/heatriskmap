@@ -92,6 +92,12 @@
             border-color: #888888;
             box-shadow: 0 0 5px rgba(255, 255, 255, 0.2);
         }
+        body.dark-mode .modal-content {
+            background-color: #1e1e1e;
+            color: #ffffff;
+            border-color: #555555;
+            box-shadow: none;
+        }
         .dashboard-title {
             font-weight: bold; /* Make the text bold */
             background: linear-gradient(to bottom, rgb(255, 102, 0), darkred); /* Gradient from dark orange to dark red */
@@ -288,6 +294,16 @@
                         <li><a href="https://www.wpc.ncep.noaa.gov/heatrisk/" target="_blank">NWS Heat Risk</a></li>
                         <li><a href="https://ephtracking.cdc.gov/Applications/heatTracker/" target="_blank">CDC Heat and Health Index</a></li>
                     </ul>
+                </div>
+                <!-- Color Scheme Dropdown -->
+                <div class="form-group" style="margin:10px;">
+                    <label for="colorSchemeSelect">Select Color Scheme:</label>
+                    <select id="colorSchemeSelect" class="form-control">
+                        <option value="default">Default (Pink-Red)</option>
+                        <option value="colorblind">Colorblind-Friendly</option>
+                        <option value="differentiated">Differentiated (Red, Blue, Green)</option>
+                        <option value="complementary">Complementary (Yellow-Orange-Red)</option>
+                    </select>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
