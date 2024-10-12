@@ -322,12 +322,14 @@ downloadButton.addEventListener('click', () => {
     downloadFilteredData();
 });
 
+let currentStartDate = new Date(); // Set to today's date in 'YYYY-MM-DD' format initially
+
 // Load initial data
 loadDataForSelectedDay(daySelect.value);
 
 // Function to load data for the selected day
 async function loadDataForSelectedDay(selectedDay) {
-    const today = new Date();
+    const today = currentStartDate;
     const formattedDate = today.toISOString().slice(0, 10).replace(/-/g, '');
     const yesterday = new Date(today);
     yesterday.setDate(today.getDate() - 1);
@@ -599,7 +601,7 @@ function updateMapLayer() {
         features: filteredFeatures
     };
 
-    // Create a new layer
+    // Create the new heat risk layer
     const newLayer = new deck.GeoJsonLayer({
         id: 'heat-risk-layer',
         data: filteredData,
@@ -612,33 +614,6 @@ function updateMapLayer() {
         getLineWidth: 0.5,
         lineWidthUnits: 'pixels',
         autoHighlight: true,
-        getTooltip: ({ object }) => {
-            if (object) {
-                console.log("bruh")
-            }
-        },
-        onClick: info => {
-            if (info.object) {
-                const properties = info.object.properties;
-                const riskLevel = properties.raster_value;
-                const hhiValue = properties[selectedHHIIndicator];
-                
-                console.log("Clicked on:", properties, riskLevel, hhiValue)
-
-            } else {
-                console.warn('No feature found at the clicked point.');
-            }
-        }
-        
-        
-        
-    });
-
-    // Update the layer
-    deckgl.setProps({ layers: [newLayer] });
-
-    // Use setProps to add getTooltip
-    deckgl.setProps({
         getTooltip: ({ object }) => {
             if (object) {
                 const properties = object.properties;
@@ -663,15 +638,60 @@ function updateMapLayer() {
                 };
             }
             return null;
+        },
+        onClick: info => {
+            if (info.object) {
+                const properties = info.object.properties;
+                const riskLevel = properties.raster_value;
+                const hhiValue = properties[selectedHHIIndicator];
+
+                console.log("Clicked on:", properties, riskLevel, hhiValue);
+            } else {
+                console.warn('No feature found at the clicked point.');
+            }
         }
     });
 
+    // Update the layers, keeping existing ones and replacing only the heat risk layer
+    const currentLayers = deckgl.props.layers.filter(layer => layer.id !== 'heat-risk-layer');
+    deckgl.setProps({ layers: [...currentLayers, newLayer] });
 
+
+    // Use setProps to add getTooltip
+    deckgl.setProps({
+        getTooltip: ({ object }) => {
+            if (object) {
+                const properties = object.properties;
+                const riskLevel = properties.raster_value;
+                const hhiValue = properties[selectedHHIIndicator];
+
+                return {
+                    html: 
+                        `<div style="background: white; padding: 10px; border-radius: 4px;">
+                            <strong>Heat Risk Level:</strong> ${riskLevel}<br>
+                            <strong>${selectedHHIIndicator}:</strong> ${hhiValue}
+                        </div>`
+                    ,
+                    style: {
+                        backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                        color: '#000',
+                        fontSize: '12px',
+                        padding: '8px',
+                        borderRadius: '4px',
+                        maxWidth: '300px',
+                    }
+                };
+            }
+            return null;
+        }
+    });
+
+    
     // After updating the map layer, generate charts
     generatePopulationChart(filteredData);
     generateAge65Chart(filteredData);
-
 }
+
 
 // Function to generate population affected by heat risk level
 function generatePopulationChart(data) {
@@ -945,6 +965,9 @@ startDateSelect.addEventListener('change', () => {
     const dateOptions = [];
     for (let i = 0; i < 7; i++) {
         const date = new Date(selectedDate); // Clone the selectedDate
+        currentStartDate = new Date(date.getTime()); // Clone the date using getTime()
+        console.log("date", currentStartDate)
+
         date.setDate(selectedDate.getDate() + i); // Add i days
 
         // Format the date as YYYY-MM-DD for consistency
@@ -963,6 +986,8 @@ startDateSelect.addEventListener('change', () => {
         option.text = optionText;
         daySelect.add(option);
     });
+
+    loadDataForSelectedDay(daySelect.value);
 });
 
 
