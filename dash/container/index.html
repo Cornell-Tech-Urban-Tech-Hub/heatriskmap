@@ -275,26 +275,26 @@
             <input type="date" id="start-date-select" class="form-control">
         </div>
 
-        <div class="form-group">
-            <!-- <label for="risk-level-select">Select Heat Risk Levels:</label> -->
-            <select id="risk-level-select" class="form-control" multiple>
-                <option value="0">0</option>
-                <option value="1">1</option>
-                <option value="2" selected>2</option>
-                <option value="3" selected>3</option>
-                <option value="4" selected>4</option>
-            </select>
-        </div>
+        <h6>3. Heat Risk</h6>
 
-        <!-- Expander for Heat Risk Levels Description -->
-        <div class="form-group">
-            <button class="btn btn-link" data-toggle="collapse" data-target="#heat-risk-levels-info">
-                Learn more about heat risk levels
-            </button>
-            <div id="heat-risk-levels-info" class="collapse">
-                <!-- Content will be populated dynamically -->
-            </div>
-        </div>
+        <p class="text-muted small mb-2">
+            Select one or more levels of heat risk to display. 
+            <a href="#" data-toggle="collapse" data-target="#heat-risk-levels-info">Learn more about heat risk levels</a>
+          </p>
+          
+          <div class="form-group">
+            <select id="risk-level-select" class="form-control" multiple>
+              <option value="0">0</option>
+              <option value="1">1</option>
+              <option value="2" selected>2</option>
+              <option value="3" selected>3</option>
+              <option value="4" selected>4</option>
+            </select>
+          </div>
+          
+          <div id="heat-risk-levels-info" class="collapse">
+            <!-- Content will be populated dynamically -->
+          </div>
 
         <h6>4. Heat and Health Index Indicator</h6>
         <p class="text-muted small mb-2">Select which indicator from the CDC Heat and Health Index to display. (Default: Overall HHI Score). Use the button below to display indicator description or consult the <a href="https://www.atsdr.cdc.gov/placeandhealth/hhi/docs/technical_documentation">HHI technical documentation</a>.</p>
