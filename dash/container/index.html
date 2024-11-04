@@ -46,8 +46,8 @@
         body, html {
             height: 100%;
             margin: 0;
-            overflow-y:hidden; /* stops issue with popup causing scrollbar to appear */
-            overflow-x:hidden;
+            overflow-y: hidden; /* stops issue with popup causing scrollbar to appear */
+            overflow-x: hidden;
         }
         /* Dark mode styles */
         body.dark-mode {
@@ -57,7 +57,7 @@
         #deckgl-container {
             position: absolute;
             top: 0;
-            left: 350px; /* Adjusted to accommodate sidebar width */
+            left: 450px; /* Adjusted to accommodate new sidebar width */
             right: 0;
             bottom: 0;
         }
@@ -65,7 +65,7 @@
             position: absolute;
             top: 0;
             left: 0;
-            width: 350px; /* Adjusted width */
+            width: 450px; /* Adjusted width */
             height: 100%;
             overflow-y: auto;
             background-color: #f8f9fa;
@@ -78,83 +78,150 @@
             color: #ffffff;
             box-shadow: 2px 0px 5px rgba(255,255,255,0.1);
         }
-
-        /* Apply styles to form controls when a parent element (e.g., body) has the dark-mode class */
+    
+        /* Form controls in dark mode */
         body.dark-mode .form-control {
             background-color: #1e1e1e;
             color: #ffffff;
             border-color: #555555;
             box-shadow: none;
         }
-
-        /* Optional: Modify the dropdown arrow color */
+    
+        /* Dropdown arrow color in dark mode */
         body.dark-mode .form-control:focus {
             border-color: #888888;
             box-shadow: 0 0 5px rgba(255, 255, 255, 0.2);
         }
+        
+        /* Modal dark mode */
         body.dark-mode .modal-content {
             background-color: #1e1e1e;
             color: #ffffff;
             border-color: #555555;
             box-shadow: none;
         }
+    
         .dashboard-title {
-            font-weight: bold; /* Make the text bold */
-            background: linear-gradient(to bottom, rgb(255, 102, 0), darkred); /* Gradient from dark orange to dark red */
-            -webkit-background-clip: text; /* Use the gradient as text color */
-            -webkit-text-fill-color: transparent; /* Make the text transparent to show the gradient */
-            background-clip: text; /* For non-WebKit browsers */
-            text-fill-color: transparent; /* For non-WebKit browsers */
+            font-weight: bold;
+            background: linear-gradient(to bottom, rgb(255, 102, 0), darkred);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-fill-color: transparent;
             font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            /*margin-left:10px;*/
-            margin-top:5px;
+            margin-top: 5px;
             font-size: large;
         }
-
+    
         .toggle-btn {
             border-radius: 20px;
             border-color: lightgrey !important;
             border: 0.00001rem solid;
         }
-
+    
         .modal-dialog {
             max-width: 800px;
             margin: 1.75rem auto;
         }
-
+    
         .ml-2 {
             margin-left: 0rem !important;
         }
-
-        /* Customize the entire scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px; /* Width of the scrollbar */
-        }
-
-        /* Customize the track (background of the scrollbar) */
-        ::-webkit-scrollbar-track {
-            background: #f1f1f1; /* Light background color */
-            border-radius: 10px; /* Rounded corners */
-        }
-
-        /* Customize the scrollbar thumb (draggable part) */
-        ::-webkit-scrollbar-thumb {
-            background: #888; /* Color of the scrollbar thumb */
-            border-radius: 10px; /* Rounded corners for a sleek look */
-        }
-
-        /* Change the color when the scrollbar is hovered */
-        ::-webkit-scrollbar-thumb:hover {
-            background: #555; /* Darker shade on hover */
-        }
-
     
+        /* Scrollbar customization */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+    
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+    
+        /* Dark mode scrollbar track */
+        body.dark-mode ::-webkit-scrollbar-track {
+            background: #2d2d2d;
+        }
+    
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+    
+        /* Dark mode scrollbar thumb */
+        body.dark-mode ::-webkit-scrollbar-thumb {
+            background: #666;
+        }
+    
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+    
+        /* Dark mode scrollbar thumb hover */
+        body.dark-mode ::-webkit-scrollbar-thumb:hover {
+            background: #777;
+        }
+    
+        /* Additional text styles for descriptions */
+        .text-muted.small {
+            font-size: 0.875rem;
+            line-height: 1.4;
+        }
+    
+        /* Dark mode text-muted override */
+        body.dark-mode .text-muted {
+            color: #aaaaaa !important;
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .risk-option {
+            display: flex;
+            align-items: flex-start;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .risk-option:hover {
+            background-color: #f8f8f8;
+        }
+
+        .risk-level {
+            display: inline-block;
+            width: 25px;
+            height: 25px;
+            text-align: center;
+            line-height: 25px;
+            border-radius: 50%;
+            margin-right: 10px;
+            color: black;
+            font-weight: bold;
+        }
+
+        .risk-description {
+            flex: 1;
+        }
+
+        input[type="checkbox"] {
+            margin-right: 10px;
+            margin-top: 5px;
+        }
+
+        label {
+            display: flex;
+            align-items: flex-start;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
     <!-- Sidebar for Controls -->
     <div id="sidebar">
-
 
         <div id="sidebar-header" class="mb-3 d-flex justify-content-between align-items-center">
             <h5 class="dashboard-title">Heat Risk Dashboard</h5>
@@ -170,8 +237,14 @@
                 </button>
             </div>
         </div>
+
+        <div id = "header-description" class="mb-3 d-flex justify-content-between align-items-center">
+            <p class="text-muted small mb-2">This app provides a unified geo-referenced overlay of <a href="https://www.wpc.ncep.noaa.gov/heatrisk/">NWS HeatRisk</a> forecasts and <a href="https://ephtracking.cdc.gov/Applications/heatTracker/">CDC Heat and Health Index</a> indicators for the United States. This is an experimental prototype provided for informational purposes only by the <a href="https://urban.tech.cornell.edu/">Urban Tech Hub</a> at Cornell Tech as part of the <a href="https://extremeheat.us/about">Cornell Initiative on Aging and Adaptation to Extreme Heat.</a></p>
+        </div>
+
+        <h6>1.  Geography</h6>
+        <p class="text-muted small mb-2">Choose your location to view specific heat risk data for your area.</p>
         
-        <h6>Location</h6>
         <div class="form-group">
             <!-- <label for="state-select">Select State:</label> -->
             <select id="state-select" class="form-control"></select>
@@ -184,17 +257,22 @@
 
         <div class="form-group">
             <!-- <label for="zip-code-input">Enter ZIP Code to Zoom In:</label> -->
-            <input type="text" id="zip-code-input" class="form-control" placeholder="e.g., 10044">
+            <input type="text" id="zip-code-input" class="form-control" placeholder="Optional: Enter ZIP code e.g., 10044">
         </div>
 
-        <h6>Heat Risk</h6>
-        <div class="form-group">
-            <!-- <label for="start-date-select">Select Start Date:</label> -->
-            <input type="date" id="start-date-select" class="form-control">
-        </div>
+
+        <h6>2. Time Period</h6>
+
+        <p class="text-muted small mb-2">Select a forecast day to display.</p>
         <div class="form-group">
             <!-- <label for="day-select">Select Heat Risk Day:</label> -->
             <select id="day-select" class="form-control"></select>
+        </div>
+
+        <p class="text-muted small mb-2">Optional: Select a different start date to view historical data.</p>
+        <div class="form-group">
+            <!-- <label for="start-date-select">Select Start Date:</label> -->
+            <input type="date" id="start-date-select" class="form-control">
         </div>
 
         <div class="form-group">
@@ -218,7 +296,8 @@
             </div>
         </div>
 
-        <h6>Health Index</h6>
+        <h6>4. Heat and Health Index Indicator</h6>
+        <p class="text-muted small mb-2">Select which indicator from the CDC Heat and Health Index to display. (Default: Overall HHI Score). Use the button below to display indicator description or consult the <a href="https://www.atsdr.cdc.gov/placeandhealth/hhi/docs/technical_documentation">HHI technical documentation</a>.</p>
         <div class="form-group">
             <!-- <label for="hhi-indicator-select">Select CDC Heat and Health Index Indicator:</label> -->
             <select id="hhi-indicator-select" class="form-control"></select>
@@ -234,8 +313,10 @@
             </div>
         </div>
 
+        <h6>5. Sensitivity</h6>
+        <p class="text-muted small mb-2">Set the percentile threshold of values to display. For instance, a 90 percent sensitivity will select the 10 percent of areas with the highest values.</p>
         <div class="form-group">
-            <label for="percentile-threshold">Heat Health Index Percentile Threshold:</label>
+            <!-- <label for="percentile-threshold">4. Adjust Sensitivity</label> -->
             <input type="range" id="percentile-threshold" class="form-control" min="0" max="100" value="80" step="10">
             <span id="percentile-value">80</span>%
         </div>

@@ -25,6 +25,8 @@ Run locally:
 
         cd dash/container && docker compose up --build heatmap
 
+Then load the app at [http://127.0.0.1/](http://127.0.0.1/)
+
 ### Deployment
 
 Deployed using AWS Fargate with [this approach](https://github.com/tzaffi/streamlit-cdk-fargate)
