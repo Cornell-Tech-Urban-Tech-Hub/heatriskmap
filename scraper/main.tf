@@ -141,8 +141,10 @@ resource "aws_iam_policy" "batch_job_policy" {
           "ecr:BatchCheckLayerAvailability",
           "ecr:GetDownloadUrlForLayer",
           "ecr:BatchGetImage",
+          "logs:CreateLogGroup",
           "logs:CreateLogStream",
           "logs:PutLogEvents",
+          "logs:DescribeLogStreams",
           "s3:PutObject",
           "s3:GetObject",
           "s3:ListBucket"
@@ -150,6 +152,8 @@ resource "aws_iam_policy" "batch_job_policy" {
         Resource = [
           "arn:aws:s3:::heat-risk-dashboard",
           "arn:aws:s3:::heat-risk-dashboard/*",
+          "arn:aws:logs:us-east-1:870747888580:log-group:/aws/batch/job",
+          "arn:aws:logs:us-east-1:870747888580:log-group:/aws/batch/job:*",
           "*"
         ]
       }
@@ -255,6 +259,12 @@ resource "aws_iam_role" "events_batch_role" {
 resource "aws_iam_role_policy_attachment" "events_batch_policy" {
   role       = aws_iam_role.events_batch_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSBatchServiceEventTargetRole"
+}
+
+# Add CloudWatch log group for Batch jobs
+resource "aws_cloudwatch_log_group" "batch_job_logs" {
+  name              = "/aws/batch/job"
+  retention_in_days = 14
 }
 
 # Outputs for use in the build_and_push.sh script
