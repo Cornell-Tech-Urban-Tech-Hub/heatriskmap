@@ -42,12 +42,12 @@ await populateInformationalBoxes();
 function populateInformationalBoxes() {
     heatRiskLevelsInfo.innerHTML = `
         <p><strong>Heat Risk Levels:</strong></p>
-        <ul>
-            <li><strong>0:</strong> Little to no risk from expected heat.</li>
-            <li><strong>1:</strong> Minor - Affects primarily those extremely sensitive to heat.</li>
-            <li><strong>2:</strong> Moderate - Affects most individuals sensitive to heat.</li>
-            <li><strong>3:</strong> Major - Affects anyone without effective cooling and/or adequate hydration.</li>
-            <li><strong>4:</strong> Extreme - Rare and/or long-duration extreme heat with little to no overnight relief.</li>
+        <ul style="list-style: none; padding-left: 0;">
+            <li><span style="display:inline-block; min-width:70px; background:#b5d18e; color:#222; font-weight:bold; border-radius:4px; padding:2px 8px;">Little 0</span> Little to no risk from expected heat.</li>
+            <li><span style="display:inline-block; min-width:70px; background:#fff28c; color:#222; font-weight:bold; border-radius:4px; padding:2px 8px;">Minor 1</span> Affects primarily those extremely sensitive to heat.</li>
+            <li><span style="display:inline-block; min-width:70px; background:#ffa749; color:#222; font-weight:bold; border-radius:4px; padding:2px 8px;">Moderate 2</span>Affects most individuals sensitive to heat.</li>
+            <li><span style="display:inline-block; min-width:70px; background:#ff5757; color:#fff; font-weight:bold; border-radius:4px; padding:2px 8px;">Major 3</span> Affects anyone without effective cooling and/or adequate hydration.</li>
+            <li><span style="display:inline-block; min-width:70px; background:#a349a4; color:#fff; font-weight:bold; border-radius:4px; padding:2px 8px;">Extreme 4</span> Rare and/or long-duration extreme heat with little to no overnight relief.</li>
         </ul>
     `;
 }
