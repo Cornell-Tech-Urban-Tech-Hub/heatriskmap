@@ -1151,12 +1151,11 @@ populateDatePicker(bucketUrl);
 // Define color schemes
 const colorSchemes = {
     default: [
-        [247, 192, 186], // #f7c0ba
-        [242, 142, 128], // #f28e80
-        [231, 88, 80],   // #e75850
-        [192, 57, 43],   // #c0392b
-        [142, 44, 43],   // #8e2c2b
-        [112, 57, 71]    // #703947
+        [181, 209, 142], // Green (0) - #b5d18e
+        [255, 242, 140], // Yellow (1) - #fff28c
+        [255, 167, 73],  // Orange (2) - #ffa749
+        [255, 87, 87],   // Red (3) - #ff5757
+        [163, 73, 164]   // Magenta (4) - #a349a4
     ],
     colorblind: [
         [213, 94, 0],    // Orange
