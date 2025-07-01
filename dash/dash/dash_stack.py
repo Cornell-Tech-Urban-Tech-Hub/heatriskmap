@@ -3,8 +3,6 @@ from aws_cdk import (
     aws_ec2 as ec2,
     aws_ecs as ecs,
     aws_ecs_patterns as ecs_patterns,
-    aws_route53 as route53,
-    aws_certificatemanager as acm,
     aws_cloudwatch as cloudwatch,
     aws_s3 as s3,
     aws_logs as logs,
@@ -19,11 +17,6 @@ class HeatRiskMapAppStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        # Define the domain name and subdomain
-        domain_name = "urbantech.info"
-        subdomain = "heatmap"
-        fqdn = f"{subdomain}.{domain_name}"
-
         # VPC
         vpc = ec2.Vpc(self, "HeatRiskMapAppVpc", max_azs=2)
 
@@ -31,15 +24,6 @@ class HeatRiskMapAppStack(Stack):
         cluster = ecs.Cluster(self, "HeatRiskMapAppCluster", 
             vpc=vpc,
             container_insights=True
-        )
-
-        # Look up the hosted zone
-        zone = route53.HostedZone.from_lookup(self, "Zone", domain_name=domain_name)
-
-        # Create a certificate for the subdomain
-        certificate = acm.Certificate(self, "Certificate",
-            domain_name=fqdn,
-            validation=acm.CertificateValidation.from_dns(zone)
         )
 
         # Reference existing S3 bucket
@@ -70,9 +54,6 @@ class HeatRiskMapAppStack(Stack):
                     log_group=log_group
                 ),
             ),
-            certificate=certificate,
-            domain_name=fqdn,
-            domain_zone=zone,
         )
 
         # Configure health check for the target group

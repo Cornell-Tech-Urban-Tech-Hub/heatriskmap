@@ -880,12 +880,87 @@ function populateCountyOptions(countiesData, selectedState = "") {
 // Function to populate HHI indicators
 function populateHHIIndicators(hhiDescriptions) {
     hhiIndicatorSelect.innerHTML = '';
-    hhiDescriptions.forEach(indicator => {
-        const option = document.createElement('option');
-        option.value = indicator['weighted_2024_VARIABLE_NAME']; // Use bracket notation to access the column
-        option.text = indicator['2024_VARIABLE_NAME']; // Correctly access the description field
-        hhiIndicatorSelect.add(option);
+    
+    // Create a mapping of variable names to intuitive labels
+    const labelMapping = {
+        'weighted_OVERALL_SCORE': 'Overall HHI Score (Composite)',
+        'weighted_OVERALL_RANK': 'Overall HHI Rank (Percentile)',
+        'weighted_HHB_SCORE': 'Historical Heat Burden Score',
+        'weighted_HHB_RANK': 'Historical Heat Burden Rank',
+        'weighted_SEN_SCORE': 'Sensitivity Score',
+        'weighted_SEN_RANK': 'Sensitivity Rank',
+        'weighted_SOCIODEM_SCORE': 'Sociodemographic Score',
+        'weighted_SOCIODEM_RANK': 'Sociodemographic Rank',
+        'weighted_NBE_SCORE': 'Natural & Built Environment Score',
+        'weighted_NBE_RANK': 'Natural & Built Environment Rank',
+        'weighted_P_AGE65': 'Persons Aged 65+ (Percentage)',
+        'weighted_PR_AGE65': 'Persons Aged 65+ (Percentile Rank)',
+        'weighted_P_AGE5': 'Persons Under 5 Years (Percentage)',
+        'weighted_PR_AGE5': 'Persons Under 5 Years (Percentile Rank)',
+        'weighted_P_ASTHMA': 'Asthma Prevalence (Percentage)',
+        'weighted_PR_ASTHMA': 'Asthma Prevalence (Percentile Rank)',
+        'weighted_P_CHD': 'Coronary Heart Disease Prevalence (Percentage)',
+        'weighted_PR_CHD': 'Coronary Heart Disease Prevalence (Percentile Rank)',
+        'weighted_P_COPD': 'COPD Prevalence (Percentage)',
+        'weighted_PR_COPD': 'COPD Prevalence (Percentile Rank)',
+        'weighted_P_DIABETES': 'Diabetes Prevalence (Percentage)',
+        'weighted_PR_DIABETES': 'Diabetes Prevalence (Percentile Rank)',
+        'weighted_P_DISABL': 'Persons with Disability (Percentage)',
+        'weighted_PR_DISABL': 'Persons with Disability (Percentile Rank)',
+        'weighted_P_ELP': 'Limited English Proficiency (Percentage)',
+        'weighted_PR_ELP': 'Limited English Proficiency (Percentile Rank)',
+        'weighted_P_IMPERV': 'Impervious Surface Coverage (Percentage)',
+        'weighted_PR_IMPERV': 'Impervious Surface Coverage (Percentile Rank)',
+        'weighted_P_ISO': 'Persons Living Alone (Percentage)',
+        'weighted_PR_ISO': 'Persons Living Alone (Percentile Rank)',
+        'weighted_P_MNTLH': 'Poor Mental Health (Percentage)',
+        'weighted_PR_MNTLH': 'Poor Mental Health (Percentile Rank)',
+        'weighted_P_MOBILE': 'Mobile Homes (Percentage)',
+        'weighted_PR_MOBILE': 'Mobile Homes (Percentile Rank)',
+        'weighted_P_NEHD': 'Extreme Heat Days (Count)',
+        'weighted_PR_NEHD': 'Extreme Heat Days (Percentile Rank)',
+        'weighted_P_NOHSDP': 'No High School Diploma (Percentage)',
+        'weighted_PR_NOHSDP': 'No High School Diploma (Percentile Rank)',
+        'weighted_P_NOVEH': 'Households with No Vehicle (Percentage)',
+        'weighted_PR_NOVEH': 'Households with No Vehicle (Percentile Rank)',
+        'weighted_P_OBS': 'Obesity Prevalence (Percentage)',
+        'weighted_PR_OBS': 'Obesity Prevalence (Percentile Rank)',
+        'weighted_P_ODW': 'Outdoor Workers (Percentage)',
+        'weighted_PR_ODW': 'Outdoor Workers (Percentile Rank)',
+        'weighted_P_OZONE': 'Ozone Exceedance Days (Annual Average)',
+        'weighted_PR_OZONE': 'Ozone Exceedance Days (Percentile Rank)',
+        'weighted_P_PM25': 'PM2.5 Exceedance Days (Annual Average)',
+        'weighted_PR_PM25': 'PM2.5 Exceedance Days (Percentile Rank)',
+        'weighted_P_POV': 'Persons Below 150% Poverty (Percentage)',
+        'weighted_PR_POV': 'Persons Below 150% Poverty (Percentile Rank)',
+        'weighted_P_RENT': 'Renter-Occupied Housing (Percentage)',
+        'weighted_PR_RENT': 'Renter-Occupied Housing (Percentile Rank)',
+        'weighted_P_TREEC': 'Tree Canopy Coverage (Percentage)',
+        'weighted_PR_TREEC': 'Tree Canopy Coverage (Percentile Rank)',
+        'weighted_P_UNEMP': 'Unemployment Rate (Percentage)',
+        'weighted_PR_UNEMP': 'Unemployment Rate (Percentile Rank)',
+        'weighted_P_UNINSUR': 'Uninsured Population (Percentage)',
+        'weighted_PR_UNINSUR': 'Uninsured Population (Percentile Rank)',
+        'weighted_POP': 'Population Estimate'
+    };
+    
+    // Create array of options with labels and values
+    const options = hhiDescriptions
+        .filter(indicator => labelMapping[indicator['weighted_2024_VARIABLE_NAME']]) // Only include mapped indicators
+        .map(indicator => ({
+            value: indicator['weighted_2024_VARIABLE_NAME'],
+            label: labelMapping[indicator['weighted_2024_VARIABLE_NAME']]
+        }))
+        .sort((a, b) => a.label.localeCompare(b.label)); // Sort alphabetically by label
+    
+    // Add options to the select element
+    options.forEach(option => {
+        const optionElement = document.createElement('option');
+        optionElement.value = option.value;
+        optionElement.text = option.label;
+        hhiIndicatorSelect.add(optionElement);
     });
+    
     // Set the default value to 'weighted_OVERALL_SCORE'
     hhiIndicatorSelect.value = 'weighted_OVERALL_SCORE';
     updateHHIIndicatorInfo();

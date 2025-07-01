@@ -19,7 +19,7 @@ class HeatRiskMapS3Stack(Stack):
 
         # Define the domain name and subdomain
         domain_name = "urbantech.info"
-        subdomain = "heatmap2"
+        subdomain = "heatmap"
         fqdn = f"{subdomain}.{domain_name}"
 
         # Look up the hosted zone
