@@ -8,7 +8,9 @@ services:
     ports:
       - "80:80"
     volumes:
-      - .:/usr/share/nginx/html
+      - ./app.js:/usr/share/nginx/html/app.js
+      - ./index.html:/usr/share/nginx/html/index.html
+      - ./data:/usr/share/nginx/html/data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost"]
       interval: 30s
