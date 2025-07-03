@@ -89,7 +89,7 @@ class HeatRiskMapS3Stack(Stack):
 
         # Deploy the static files from the container directory
         s3_deployment.BucketDeployment(self, "DeployWebsite",
-            sources=[s3_deployment.Source.asset("./container/")],
+            sources=[s3_deployment.Source.asset("./static/")],
             destination_bucket=website_bucket,
             distribution=distribution,
             distribution_paths=["/*"]
