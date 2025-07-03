@@ -10,5 +10,9 @@
   "hosted-zone:account=870747888580:domainName=urbantech.info:region=us-east-1": {
     "Id": "/hostedzone/Z00688633QHMK1O13WCNL",
     "Name": "urbantech.info."
-  }
+  },
+  "acknowledged-issue-numbers": [
+    34892,
+    34892
+  ]
 }
