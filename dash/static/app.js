@@ -792,6 +792,12 @@ function generateAge65Chart(data) {
 function calculatePercentileThreshold(data, indicator, percentile) {
     const values = data.features.map(f => f.properties[indicator]).filter(v => v !== null && !isNaN(v));
     values.sort((a, b) => a - b);
+    
+    // Handle edge cases
+    if (values.length === 0) return 0;
+    if (percentile <= 0) return values[0];
+    if (percentile >= 100) return values[values.length - 1];
+    
     const index = Math.floor(percentile / 100 * values.length);
     return values[index] || 0;
 }
