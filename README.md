@@ -37,6 +37,7 @@ Deployed as a static website to AWS S3 and served via CloudFront using AWS CDK. 
 To update the stack:
 
     cd dash
+    source .venv/bin/activate
     cdk synth # check the stack
     cdk deploy # push changes
 
