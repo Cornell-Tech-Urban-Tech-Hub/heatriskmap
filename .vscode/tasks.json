@@ -1,0 +1,41 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Start HTTP Server",
+            "type": "shell",
+            "command": "python3 -m http.server 8000",
+            "options": {
+                "cwd": "${workspaceFolder}/dash/static"
+            },
+            "isBackground": true,
+            "problemMatcher": {
+                "pattern": {
+                    "regexp": "^$",
+                    "file": 1,
+                    "location": 2,
+                    "message": 3
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^Serving HTTP",
+                    "endsPattern": "^Serving HTTP"
+                }
+            }
+        },
+        {
+            "label": "Stop HTTP Server",
+            "type": "shell",
+            "command": "echo ${input:terminate}",
+            "problemMatcher": []
+        }
+    ],
+    "inputs": [
+        {
+            "id": "terminate",
+            "type": "command",
+            "command": "workbench.action.tasks.terminate",
+            "args": "Start HTTP Server"
+        }
+    ]
+}

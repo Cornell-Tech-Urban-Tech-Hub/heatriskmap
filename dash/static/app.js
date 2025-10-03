@@ -281,7 +281,7 @@ for (let i = 1; i <= 7; i++) {
     const option = document.createElement('option');
     const date = new Date();
     date.setDate(date.getDate() + i - 1);
-    option.value = `Day+${i}`;
+    option.value = `Day ${i}`;
     option.text = `Day ${i} - ${date.toLocaleDateString()}`;
     daySelect.add(option);
 }
@@ -322,7 +322,8 @@ downloadButton.addEventListener('click', () => {
     downloadFilteredData();
 });
 
-let currentStartDate = new Date(); // Set to today's date in 'YYYY-MM-DD' format initially
+// Set to today's date
+let currentStartDate = new Date();
 
 // Load initial data
 loadDataForSelectedDay(daySelect.value);
@@ -330,13 +331,25 @@ loadDataForSelectedDay(daySelect.value);
 // Function to load data for the selected day
 async function loadDataForSelectedDay(selectedDay) {
     const today = currentStartDate;
-    const formattedDate = today.toISOString().slice(0, 10).replace(/-/g, '');
+    // Use local date instead of UTC to avoid timezone issues
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    const formattedDate = `${year}${month}${day}`;
+
     const yesterday = new Date(today);
     yesterday.setDate(today.getDate() - 1);
-    const formattedYesterday = yesterday.toISOString().slice(0, 10).replace(/-/g, '');
+    const yearY = yesterday.getFullYear();
+    const monthY = String(yesterday.getMonth() + 1).padStart(2, '0');
+    const dayY = String(yesterday.getDate()).padStart(2, '0');
+    const formattedYesterday = `${yearY}${monthY}${dayY}`;
 
     const dataUrl = `https://heat-risk-dashboard.s3.amazonaws.com/heat_risk_analysis_${selectedDay}_${formattedDate}.geoparquet`;
     const fallbackUrl = `https://heat-risk-dashboard.s3.amazonaws.com/heat_risk_analysis_${selectedDay}_${formattedYesterday}.geoparquet`;
+
+    console.log('Attempting to load data:');
+    console.log('Primary URL:', dataUrl);
+    console.log('Fallback URL:', fallbackUrl);
 
     try {
         const geojsonData = await fetchGeoParquetWithFallback(dataUrl, fallbackUrl);

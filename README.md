@@ -15,17 +15,20 @@ A static JavaScript app (in the `static` directory) that allows users to make se
 
 ### Development
 
-To run locally, simply open the `index.html` file in the `static` directory in your browser:
+**Note:** The app must be served through a local web server (not opened directly via `file://`) due to ES6 module CORS restrictions.
+
+#### Option 1: VS Code Launch Configuration (Recommended)
+
+Press `F5` or use the "Run and Debug" panel to launch the "Launch Dashboard in Browser" configuration. This will automatically start a local HTTP server and open the app in your browser.
+
+#### Option 2: Manual HTTP Server
+
+Use Python's built-in HTTP server:
 
     cd dash/static
-    open index.html
+    python3 -m http.server 8000
 
-Or use a simple HTTP server (recommended for local development):
-
-    cd dash/static
-    python3 -m http.server
-
-Then load the app at [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
+Then open [http://127.0.0.1:8000/](http://127.0.0.1:8000/) in your browser.
 
 ### Deployment
 
